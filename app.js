@@ -83,6 +83,51 @@ searchBox.proximity = map.getCenter();
 const searchContainer = document.getElementById('search-box');
 searchContainer.appendChild(searchBox);
 
+// Function to handle direct GPS coordinate input
+function handleCoordinateSearch(input) {
+    // Try to match coordinate patterns: lat, lng or lat lng
+    const coordPattern = /^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/;
+    const match = input.trim().match(coordPattern);
+    
+    if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        
+        // Validate coordinates
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            console.log('Direct coordinate search:', { lat, lng });
+            
+            lastSearchLocation = { lng, lat, zoom: 16 };
+            recenterBtn.disabled = false;
+            recenterBtn.classList.remove('off-center');
+            
+            map.flyTo({ 
+                center: [lng, lat], 
+                zoom: 16,
+                speed: 2.0
+            });
+            
+            // Use coordinates as the label
+            const label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            addPin(lng, lat, label, 'location', null, true);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Add coordinate search capability with Enter key
+searchBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const input = e.target.value;
+        if (handleCoordinateSearch(input)) {
+            e.preventDefault();
+            e.target.value = ''; // Clear the search box
+            return;
+        }
+    }
+});
+
 // Handle search results - listen for retrieve, select, and suggestion events
 searchBox.addEventListener('retrieve', (e) => {
     console.log('Retrieve event:', e.detail);
