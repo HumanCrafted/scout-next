@@ -23,6 +23,7 @@ const map = new mapboxgl.Map({
     zoom: 4.2
 });
 
+
 // Store for pins
 let pins = [];
 
@@ -309,14 +310,6 @@ function toggleMapStyle(style) {
         // No need to manually re-add them
     });
     
-    // Add error handling
-    map.once('error', (e) => {
-        console.error('Map style error:', e);
-        // Only show alert for non-403 errors (403 is common for tile access)
-        if (!e.error || !e.error.message || !e.error.message.includes('403')) {
-            alert('Failed to load map style. Check console for details.');
-        }
-    });
 }
 
 // Re-center to last search location
