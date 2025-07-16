@@ -312,7 +312,10 @@ function toggleMapStyle(style) {
     // Add error handling
     map.once('error', (e) => {
         console.error('Map style error:', e);
-        alert('Failed to load map style. Check console for details.');
+        // Only show alert for non-403 errors (403 is common for tile access)
+        if (!e.error || !e.error.message || !e.error.message.includes('403')) {
+            alert('Failed to load map style. Check console for details.');
+        }
     });
 }
 
