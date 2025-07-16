@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scout</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/search-js/v1.0.0-beta.21/web.js'></script>
+    <link href='https://fonts.googleapis.com/icon?family=Material+Icons' rel='stylesheet'>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 280px;
+            right: 0;
+            width: calc(100% - 280px);
+        }
+        
+        .left-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: hsl(0 0% 100%);
+            border-right: 1px solid hsl(214.3 31.8% 91.4%);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .controls {
+            margin-bottom: 24px;
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        /* Mapbox Search Box Styling */
+        #search-box {
+            width: 100%;
+        }
+        
+        mapbox-search-box {
+            --mapbox-search-font-size: 14px;
+            --mapbox-search-border-radius: 6px;
+            --mapbox-search-border-color: hsl(214.3 31.8% 91.4%);
+            --mapbox-search-background-color: hsl(0 0% 100%);
+            --mapbox-search-text-color: hsl(222.2 84% 4.9%);
+            --mapbox-search-placeholder-color: hsl(215.4 16.3% 46.9%);
+            --mapbox-search-focus-border-color: hsl(222.2 84% 4.9%);
+            --mapbox-search-focus-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1);
+        }
+        
+        mapbox-search-box input {
+            width: 100% !important;
+            padding: 8px 12px !important;
+            border: 1px solid hsl(214.3 31.8% 91.4%) !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+            box-sizing: border-box !important;
+            background: hsl(0 0% 100%) !important;
+            color: hsl(222.2 84% 4.9%) !important;
+            transition: border-color 0.2s !important;
+        }
+        
+        /* Hide the default search icon to prevent overlap */
+        mapbox-search-box .mapbox-search-icon,
+        mapbox-search-box [data-testid="search-icon"],
+        mapbox-search-box svg,
+        mapbox-search-box .search-icon {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        
+        mapbox-search-box input:focus {
+            outline: none !important;
+            border-color: hsl(222.2 84% 4.9%) !important;
+            box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1) !important;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: hsl(222.2 84% 4.9%);
+            color: hsl(210 40% 98%);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        
+        button:hover {
+            background: hsl(222.2 84% 4.9% / 0.9);
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        
+        button:disabled {
+            background: hsl(215.4 16.3% 46.9%);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        button:disabled:hover {
+            background: hsl(215.4 16.3% 46.9%);
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+        
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .sidebar-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: hsl(222.2 84% 4.9%);
+        }
+        
+        .sidebar-section h4 {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 0 8px 0;
+            color: hsl(215.4 16.3% 46.9%);
+        }
+        
+        .saved-map-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .map-name {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .load-btn {
+            background: #28a745;
+            font-size: 10px;
+            padding: 4px 8px;
+        }
+        
+        .load-btn:hover {
+            background: #1e7e34;
+        }
+        
+        .view-toggle {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .toggle-btn {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            margin-right: 8px;
+        }
+        
+        .toggle-btn:hover {
+            background: hsl(210 40% 98%);
+            border-color: hsl(214.3 31.8% 91.4%);
+        }
+        
+        .toggle-btn.active {
+            background: hsl(221.2 83.2% 53.3%);
+            color: hsl(210 40% 98%);
+            border-color: hsl(221.2 83.2% 53.3%);
+        }
+        
+        .toggle-btn.active:hover {
+            background: hsl(221.2 83.2% 53.3% / 0.9);
+        }
+        
+        .bottom-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 10px;
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 1000;
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .bottom-controls .control-row {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .bottom-controls .zoom-display {
+            background: none;
+            border: none;
+            padding: 0;
+            color: hsl(222.2 84% 4.9%);
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .bottom-controls .toggle-btn {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            padding: 4px 8px;
+            font-size: 11px;
+            flex: 1;
+        }
+        
+        .bottom-controls .toggle-btn:hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        .bottom-controls .toggle-btn.active {
+            background: hsl(222.2 84% 4.9%) !important;
+            color: hsl(210 40% 98%) !important;
+            border-color: hsl(222.2 84% 4.9%) !important;
+        }
+        
+        .bottom-controls button {
+            background: hsl(222.2 84% 4.9%);
+            color: hsl(210 40% 98%);
+            border: none;
+            padding: 6px 12px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        
+        .bottom-controls button:hover {
+            background: hsl(222.2 84% 4.9% / 0.9);
+        }
+        
+        .bottom-controls button:disabled {
+            background: hsl(215.4 16.3% 46.9%);
+            color: hsl(210 40% 98%);
+            opacity: 0.5;
+        }
+        
+        .bottom-controls button:not(:disabled).off-center {
+            background: hsl(222.2 84% 4.9%) !important;
+            color: hsl(210 40% 98%) !important;
+        }
+        
+        .bottom-controls button:not(:disabled).off-center:hover {
+            background: hsl(222.2 84% 4.9% / 0.9) !important;
+        }
+        
+        .bottom-controls button:not(:disabled):not(.off-center) {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+        }
+        
+        .bottom-controls button:not(:disabled):not(.off-center):hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        .pin-sidebar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: hsl(0 0% 100%);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            width: 95px;
+            max-width: 95px;
+        }
+        
+        .draggable-pin {
+            width: 32px;
+            height: 32px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: grab;
+            margin: 4px 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            user-select: none;
+            border: 2px solid #0056b3;
+            transition: all 0.2s;
+        }
+        
+        .draggable-pin:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+        
+        .draggable-pin.zone {
+            background: #28a745;
+            border-color: #1e7e34;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+        
+        .draggable-pin.zone {
+            background: hsl(222.2 84% 4.9%);
+            border-color: hsl(214.3 31.8% 91.4%);
+            color: hsl(210 40% 98%);
+        }
+        
+        .draggable-pin.zone:hover {
+            background: hsl(222.2 84% 4.9% / 0.8);
+        }
+        
+        .draggable-pin.device {
+            background: rgb(243, 243, 243);
+            border-color: hsl(214.3 31.8% 91.4%);
+            color: hsl(222.2 84% 4.9%);
+        }
+        
+        .draggable-pin.device:hover {
+            background: rgb(230, 230, 230);
+        }
+        
+        
+        .draggable-pin:active {
+            cursor: grabbing;
+        }
+        
+        .placed-pins {
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        .pin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            font-size: 14px;
+            gap: 12px;
+        }
+        
+        .pin-item-text {
+            flex: 1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            min-width: 0;
+            color: hsl(222.2 84% 4.9%);
+        }
+        
+        .pin-controls {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .pin-btn {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            font-size: 10px;
+            padding: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+        }
+        
+        .pin-btn .material-icons {
+            font-size: 12px;
+        }
+        
+        .pin-btn:hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        .edit-btn {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border-color: hsl(214.3 31.8% 91.4%);
+        }
+        
+        .edit-btn:hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        .delete-btn {
+            background: hsl(0 84.2% 60.2%);
+            color: hsl(210 40% 98%);
+            border-color: hsl(0 84.2% 60.2%);
+        }
+        
+        .delete-btn:hover {
+            background: hsl(0 84.2% 60.2% / 0.9);
+        }
+        
+        .lock-btn {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border-color: hsl(214.3 31.8% 91.4%);
+        }
+        
+        .lock-btn:hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        /* Edit marker modal */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .edit-modal.show {
+            display: flex;
+        }
+        
+        .edit-modal-content {
+            background: hsl(0 0% 100%);
+            border-radius: 8px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .edit-modal h3 {
+            margin: 0 0 20px 0;
+            color: hsl(222.2 84% 4.9%);
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .edit-modal-field {
+            margin-bottom: 16px;
+        }
+        
+        .edit-modal-field label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: hsl(222.2 84% 4.9%);
+            font-size: 14px;
+        }
+        
+        .edit-modal-field input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .edit-modal-field input:focus {
+            outline: none;
+            border-color: hsl(222.2 84% 4.9%);
+            box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1);
+        }
+        
+        .edit-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        .edit-modal-buttons button {
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .edit-modal-cancel {
+            background: hsl(0 0% 100%);
+            color: hsl(222.2 84% 4.9%);
+            border: 1px solid hsl(214.3 31.8% 91.4%);
+        }
+        
+        .edit-modal-cancel:hover {
+            background: hsl(210 40% 98%);
+        }
+        
+        .edit-modal-save {
+            background: hsl(222.2 84% 4.9%);
+            color: hsl(210 40% 98%);
+        }
+        
+        .edit-modal-save:hover {
+            background: hsl(222.2 84% 4.9% / 0.9);
+        }
+        
+        /* Pin grouping styles */
+        .pin-item {
+            position: relative;
+            cursor: grab;
+        }
+        
+        .pin-item:active {
+            cursor: grabbing;
+        }
+        
+        .pin-item.drag-over {
+            background: hsl(221.2 83.2% 53.3% / 0.1);
+            border-left: 3px solid hsl(221.2 83.2% 53.3%);
+        }
+        
+        .pin-item-child {
+            margin-left: 20px;
+            border-left: 2px solid hsl(214.3 31.8% 91.4%);
+            padding-left: 10px;
+        }
+        
+        /* Save/Load button drag states */
+        #save-load-btn.drag-over {
+            background: hsl(221.2 83.2% 53.3%);
+            color: hsl(210 40% 98%);
+            border-color: hsl(221.2 83.2% 53.3%);
+            transform: scale(1.02);
+        }
+        
+        #save-load-btn.drag-over:before {
+            content: "Drop file to load map";
+            position: absolute;
+            background: hsl(221.2 83.2% 53.3%);
+            color: hsl(210 40% 98%);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            z-index: 1000;
+        }
+        
+        /* Custom Mapbox Popup Styling for Labels */
+        .mapboxgl-popup {
+            max-width: none !important;
+        }
+        
+        .mapboxgl-popup-content {
+            background: rgba(34, 34, 34, 0.9) !important;
+            color: white !important;
+            padding: 6px 10px !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+            border: none !important;
+            white-space: nowrap !important;
+        }
+        
+        .mapboxgl-popup-tip {
+            display: none !important;
+        }
+        
+        .mapboxgl-popup-close-button {
+            display: none !important;
+        }
+        
+        /* Screenshot Mode - Hide all UI elements */
+        body.screenshot-mode .left-sidebar,
+        body.screenshot-mode .pin-sidebar,
+        body.screenshot-mode .bottom-controls {
+            display: none !important;
+        }
+        
+        body.screenshot-mode #map {
+            left: 0 !important;
+            width: 100% !important;
+        }
+        
+        /* Screenshot mode exit button */
+        .exit-screenshot-btn {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            display: none;
+            white-space: nowrap;
+        }
+        
+        body.screenshot-mode .exit-screenshot-btn {
+            display: block;
+        }
+        
+        .exit-screenshot-btn:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+    </style>
+</head>
+<body>
+    <div class="left-sidebar">
+        <div class="sidebar-section">
+            <button id="new-map-btn" style="width: 100%; margin-bottom: 16px;">Start New Map</button>
+            <div class="search-container" style="margin: 12px 0;">
+                <div id="search-box"></div>
+            </div>
+        </div>
+        
+        <div class="sidebar-section" style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <h2 id="map-title" style="margin: 0; flex: 1; cursor: pointer; font-size: 20px; font-weight: 600; color: hsl(222.2 84% 4.9%);" title="Click to edit title">Untitled Map</h2>
+                <button class="pin-btn edit-btn" onclick="editMapTitle()" title="Edit map title">
+                    <span class="material-icons">edit</span>
+                </button>
+            </div>
+            <h3>Placed Markers</h3>
+            <div id="placed-pins-list"></div>
+        </div>
+        
+        <div class="sidebar-section" style="margin-top: auto; padding-top: 16px;">
+            <div style="display: flex; gap: 8px;">
+                <button id="save-load-btn" style="flex: 1;" title="Click to save map, drag file here to load">Save/Load Map</button>
+                <button id="screenshot-mode-btn" style="width: 40px; height: 36px; display: flex; align-items: center; justify-content: center;" title="Enter screenshot mode - hides UI, shows all labels">
+                    <span class="material-icons" style="font-size: 20px;">photo_camera</span>
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="bottom-controls">
+        <div class="zoom-display" id="zoom-display">Zoom: 4.2</div>
+        <div class="control-row">
+            <button id="satellite-btn" class="toggle-btn active">Satellite</button>
+            <button id="street-btn" class="toggle-btn">Street</button>
+        </div>
+        <button id="labels-btn" class="toggle-btn">Labels</button>
+        <button id="recenter-btn" disabled>Re-center</button>
+        <button id="help-btn" class="toggle-btn" title="Help & Tutorial">
+            <span class="material-icons" style="font-size: 14px;">help_outline</span>
+        </button>
+    </div>
+    
+    <div class="pin-sidebar">
+        <div class="sidebar-section">
+            <h4>Locations</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start;">
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="1">1</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="2">2</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="3">3</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="4">4</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="5">5</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="6">6</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="7">7</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="8">8</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="9">9</div>
+                <div class="draggable-pin zone" draggable="true" data-pin-type="location" data-zone-number="10">10</div>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <h4>Devices</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <div class="draggable-pin device" draggable="true" data-pin-type="device" data-device-icon="memory">
+                    <span class="material-icons" style="font-size: 16px;">memory</span>
+                </div>
+                <div class="draggable-pin device" draggable="true" data-pin-type="device" data-device-icon="wifi">
+                    <span class="material-icons" style="font-size: 16px;">wifi</span>
+                </div>
+                <div class="draggable-pin device" draggable="true" data-pin-type="device" data-device-icon="solar-panel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;">
+                        <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <h4>Assets</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <div class="draggable-pin device" draggable="true" data-pin-type="assets" data-asset-icon="build">
+                    <span class="material-icons" style="font-size: 16px;">build</span>
+                </div>
+                <div class="draggable-pin device" draggable="true" data-pin-type="assets" data-asset-icon="lan">
+                    <span class="material-icons" style="font-size: 16px;">lan</span>
+                </div>
+                <div class="draggable-pin device" draggable="true" data-pin-type="assets" data-asset-icon="warning">
+                    <span class="material-icons" style="font-size: 16px;">warning</span>
+                </div>
+                <div class="draggable-pin device" draggable="true" data-pin-type="assets" data-asset-icon="power">
+                    <span class="material-icons" style="font-size: 16px;">power</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar-section" style="margin-top: auto; padding-top: 16px;">
+            <button id="clear-pins-btn" style="width: 100%;">Clear</button>
+        </div>
+    </div>
+    
+    <!-- Screenshot mode exit button -->
+    <button class="exit-screenshot-btn" id="exit-screenshot-btn">Exit Screenshot Mode</button>
+
+    <!-- Edit marker modal -->
+    <div class="edit-modal" id="edit-modal">
+        <div class="edit-modal-content">
+            <h3>Edit Marker</h3>
+            <div class="edit-modal-field">
+                <label for="edit-marker-name">Marker Name:</label>
+                <input type="text" id="edit-marker-name" placeholder="Enter marker name">
+            </div>
+            <div class="edit-modal-field">
+                <label for="edit-marker-coords">GPS Coordinates (lat, lng):</label>
+                <input type="text" id="edit-marker-coords" placeholder="e.g., 40.7128, -74.0060">
+            </div>
+            <div class="edit-modal-buttons">
+                <button class="edit-modal-cancel" onclick="closeEditModal()">Cancel</button>
+                <button class="edit-modal-save" onclick="saveMarkerEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
