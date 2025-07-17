@@ -629,7 +629,7 @@ newMapBtn.addEventListener('click', () => {
 
 // Help button functionality
 helpBtn.addEventListener('click', () => {
-    window.open('help.html', '_blank');
+    window.open('https://masen.craft.me/scout-help', '_blank');
 });
 
 // Drag and drop functionality for loading files
