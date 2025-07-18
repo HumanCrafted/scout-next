@@ -53,9 +53,9 @@ export default function Home() {
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
       <main className="flex flex-col gap-8 items-center text-center max-w-md w-full">
         <div>
-          <h1 className="text-4xl font-bold">Scout v2</h1>
+          <h1 className="text-4xl font-bold">Scout</h1>
           <p className="text-muted-foreground mt-2">
-            Industrial sensor mapping application with team collaboration
+            A mapping application
           </p>
         </div>
 

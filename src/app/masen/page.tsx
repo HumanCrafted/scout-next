@@ -112,7 +112,7 @@ export default function MasenTeamPage() {
       {/* Team Header */}
       <header className="bg-background border-b px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold">Masen Team - Scout v2</h1>
+          <h1 className="text-lg font-semibold">Masen Team - Scout</h1>
         </div>
         <Button variant="outline" size="sm" onClick={handleLogout}>
           Logout
