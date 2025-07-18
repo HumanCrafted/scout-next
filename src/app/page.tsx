@@ -10,11 +10,11 @@ export default function Home() {
           Industrial sensor mapping application with team collaboration, 
           real-time updates, and advanced state management.
         </p>
-        <div className="flex gap-4">
-          <Link href="/map">
-            <Button>View Map</Button>
+        <div className="flex gap-4 flex-wrap justify-center">
+          <Link href="/masen">
+            <Button>Masen Team</Button>
           </Link>
-          <Button variant="outline">Learn More</Button>
+          <Button variant="ghost">Learn More</Button>
         </div>
       </main>
     </div>
