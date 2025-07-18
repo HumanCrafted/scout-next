@@ -1,17 +1,36 @@
 {
-  "name": "masen-maps",
-  "version": "1.0.0",
-  "description": "Simple map interface with Mapbox",
-  "main": "index.js",
+  "name": "scout-next",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "dev": "http-server -p 3000 -c-1",
-    "start": "npm run dev"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "http-server": "^14.1.1"
+    "@radix-ui/react-slot": "^1.2.3",
+    "@types/mapbox-gl": "^3.4.1",
+    "autoprefixer": "^10.4.21",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "mapbox-gl": "^3.13.0",
+    "next": "15.4.2",
+    "postcss": "^8.5.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7"
   },
-  "devDependencies": {},
-  "keywords": ["mapbox", "maps", "geolocation"],
-  "author": "",
-  "license": "MIT"
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.2",
+    "typescript": "^5"
+  }
 }
