@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 import MapContainer from '@/components/map/MapContainer';
 
 export default function MasenTeamPage() {
@@ -10,6 +11,8 @@ export default function MasenTeamPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  const teamPassword = 'masen2025';
 
   // Check for existing session on load
   useEffect(() => {
@@ -34,8 +37,7 @@ export default function MasenTeamPage() {
     e.preventDefault();
     setError('');
 
-    // Simple password check (in production, this would be server-side)
-    if (password === 'masen2025') {
+    if (password === teamPassword) {
       // Create session (expires in 24 hours)
       const sessionData = {
         team: 'masen',
@@ -81,6 +83,8 @@ export default function MasenTeamPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full"
+                required
+                autoFocus
               />
             </div>
             
@@ -92,6 +96,12 @@ export default function MasenTeamPage() {
               Access Team Workspace
             </Button>
           </form>
+
+          <div className="text-center">
+            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+              ← Back to main login
+            </Link>
+          </div>
         </div>
       </div>
     );
