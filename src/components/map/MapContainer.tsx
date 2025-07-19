@@ -713,7 +713,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         {/* Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-semibold text-foreground">{teamName}</h1>
+            <h1 className="text-lg font-semibold text-foreground">{teamName.split(' ')[0]}</h1>
             <Button 
               variant="outline" 
               size="sm"
@@ -806,24 +806,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
         {/* Footer */}
         <div className="p-4 border-t border-border space-y-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full justify-start"
+          <button 
+            className="w-full flex items-center px-2 py-2 text-xs text-muted-foreground hover:bg-muted rounded-md transition-colors"
             title="Screenshot mode"
           >
-            <span className="material-icons mr-3" style={{fontSize: '16px'}}>photo_camera</span>
+            <span className="material-icons mr-3" style={{fontSize: '12px'}}>photo_camera</span>
             Screenshot Mode
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          </button>
+          <button 
             onClick={onLogout}
-            className="w-full justify-start"
+            className="w-full flex items-center px-2 py-2 text-xs text-muted-foreground hover:bg-muted rounded-md transition-colors"
           >
-            <span className="material-icons mr-3" style={{fontSize: '16px'}}>logout</span>
+            <span className="material-icons mr-3" style={{fontSize: '12px'}}>logout</span>
             Logout
-          </Button>
+          </button>
         </div>
       </div>
 
