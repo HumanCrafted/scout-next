@@ -81,6 +81,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           console.log('Map loaded successfully');
           updateZoom();
           loadTeamData();
+          
+          // Debug container dimensions
+          if (mapContainer.current) {
+            const rect = mapContainer.current.getBoundingClientRect();
+            console.log('Map container dimensions:', rect.width, 'x', rect.height);
+          }
+          
+          // Force resize after a short delay
+          setTimeout(() => {
+            if (map.current) {
+              console.log('Forcing map resize...');
+              map.current.resize();
+            }
+          }, 100);
         });
         
         map.current.on('error', (e) => {
@@ -350,7 +364,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {/* Map Container */}
       <div 
         ref={mapContainer}
-        className="absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)]"
+        className="absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full"
+        style={{ minHeight: '100vh' }}
       />
 
       {/* Bottom Controls */}
