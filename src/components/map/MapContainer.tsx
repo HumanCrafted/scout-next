@@ -51,6 +51,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   // File management state
   const [maps, setMaps] = useState<{id: string, title: string, markers: Marker[], collapsed: boolean}[]>([]);
   const [activeMapIndex, setActiveMapIndex] = useState(0);
+  const [markersCollapsed, setMarkersCollapsed] = useState(false);
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
@@ -297,9 +298,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         .setPopup(popup)
         .addTo(map.current!);
       
-      // Add drag end event
-      mapboxMarker.on('dragend', () => {
-        // TODO: Update marker position in database
+      // Add drag end event to update position in database
+      mapboxMarker.on('dragend', async () => {
+        const lngLat = mapboxMarker.getLngLat();
+        try {
+          const response = await fetch(`/api/markers/${marker.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              lat: lngLat.lat,
+              lng: lngLat.lng,
+            }),
+          });
+          
+          if (response.ok) {
+            // Update local state
+            setMarkers(prev => prev.map(m => 
+              m.id === marker.id 
+                ? { ...m, lat: lngLat.lat, lng: lngLat.lng }
+                : m
+            ));
+          } else {
+            console.error('Failed to update marker position:', response.status);
+          }
+        } catch (error) {
+          console.error('Error updating marker position:', error);
+        }
       });
       
       markersRef.current[marker.id] = mapboxMarker;
@@ -718,9 +744,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           .setPopup(popup)
           .addTo(map.current);
         
-        // Add drag end event
-        mapboxMarker.on('dragend', () => {
-          // TODO: Update marker position in database
+        // Add drag end event to update position in database
+        mapboxMarker.on('dragend', async () => {
+          const lngLat = mapboxMarker.getLngLat();
+          try {
+            const response = await fetch(`/api/markers/${marker.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                lat: lngLat.lat,
+                lng: lngLat.lng,
+              }),
+            });
+            
+            if (response.ok) {
+              // Update local state
+              setMarkers(prev => prev.map(m => 
+                m.id === marker.id 
+                  ? { ...m, lat: lngLat.lat, lng: lngLat.lng }
+                  : m
+              ));
+            } else {
+              console.error('Failed to update marker position:', response.status);
+            }
+          } catch (error) {
+            console.error('Error updating marker position:', error);
+          }
         });
         
         markersRef.current[marker.id] = mapboxMarker;
@@ -735,7 +786,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {/* Left Sidebar */}
       <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-border">
+        <div className="px-2 py-3 border-b border-border">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold text-foreground">{teamName.split(' ')[0]}</h1>
             <Button 
@@ -751,7 +802,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-border">
+        <div className="px-2 py-3 border-b border-border">
           <div 
             id="search-box"
             className="w-full"
@@ -759,7 +810,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Maps/Files Section */}
-        <div className="flex-1 px-2 py-4">
+        <div className="flex-1 px-1 py-3">
           <div className="space-y-2">
             {/* Current Map */}
             <div className="space-y-1">
@@ -768,9 +819,10 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                   <button 
                     className="mr-2 p-0.5 hover:bg-muted-foreground/10 rounded"
                     title="Collapse/expand markers"
+                    onClick={() => setMarkersCollapsed(!markersCollapsed)}
                   >
                     <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
-                      expand_more
+                      {markersCollapsed ? 'chevron_right' : 'expand_more'}
                     </span>
                   </button>
                   <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '16px'}}>
@@ -788,66 +840,68 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               </div>
               
               {/* Markers as children */}
-              <div className="ml-4 space-y-1">
-                {markers.length === 0 ? (
-                  <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
-                ) : (
-                  markers.map((marker) => (
-                    <div key={marker.id} className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
-                      <div className="flex items-center flex-1 min-w-0">
-                        <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
-                          {marker.type === 'search' ? 'place' : 
-                           marker.type === 'location' ? 'location_on' :
-                           marker.type === 'device' ? 'memory' : 'build'}
-                        </span>
-                        <span 
-                          className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                          title="Click to center on marker"
-                          onClick={() => centerOnMarker(marker)}
-                        >
-                          {marker.label}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          title={marker.locked ? 'Unlock marker' : 'Lock marker'}
-                        >
-                          <span className="material-icons" style={{fontSize: '12px'}}>
-                            {marker.locked ? 'lock' : 'lock_open'}
+              {!markersCollapsed && (
+                <div className="ml-4 space-y-1">
+                  {markers.length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
+                  ) : (
+                    markers.map((marker) => (
+                      <div key={marker.id} className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                            {marker.type === 'search' ? 'place' : 
+                             marker.type === 'location' ? 'location_on' :
+                             marker.type === 'device' ? 'memory' : 'build'}
                           </span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          title="Edit marker"
-                          onClick={() => editMarker(marker)}
-                        >
-                          <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                          title="Delete marker"
-                          onClick={() => deleteMarker(marker.id)}
-                        >
-                          <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
-                        </Button>
+                          <span 
+                            className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                            title="Click to center on marker"
+                            onClick={() => centerOnMarker(marker)}
+                          >
+                            {marker.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            title={marker.locked ? 'Unlock marker' : 'Lock marker'}
+                          >
+                            <span className="material-icons" style={{fontSize: '12px'}}>
+                              {marker.locked ? 'lock' : 'lock_open'}
+                            </span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            title="Edit marker"
+                            onClick={() => editMarker(marker)}
+                          >
+                            <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            title="Delete marker"
+                            onClick={() => deleteMarker(marker.id)}
+                          >
+                            <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border space-y-1">
+        <div className="px-2 py-3 border-t border-border space-y-1">
           <button 
             className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
             style={{fontSize: '0.75rem', fontWeight: '500'}}
