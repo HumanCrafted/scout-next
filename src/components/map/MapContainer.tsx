@@ -194,7 +194,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   };
 
   // Clear all markers
-  const clearMarkers = () => {
+  const clearMarkers = async () => {
     if (markers.length === 0) return;
     
     const confirmClear = confirm(
@@ -204,13 +204,24 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     );
     
     if (confirmClear) {
-      // Remove visual markers
-      Object.values(markersRef.current).forEach(marker => marker.remove());
-      markersRef.current = {};
-      setMarkers([]);
-      
-      // TODO: Delete from database
-      console.log('All markers cleared');
+      try {
+        // Delete all markers from database
+        for (const marker of markers) {
+          await fetch(`/api/markers/${marker.id}`, {
+            method: 'DELETE',
+          });
+        }
+        
+        // Remove visual markers
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+        setMarkers([]);
+        
+        console.log('All markers cleared from database');
+      } catch (error) {
+        console.error('Error clearing markers:', error);
+        alert('Error clearing markers. Please try again.');
+      }
     }
   };
 
@@ -239,6 +250,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         zoom: 4.2,
         speed: 1.5
       });
+    }
+  };
+
+  // Delete individual marker
+  const deleteMarker = async (markerId: string) => {
+    try {
+      const response = await fetch(`/api/markers/${markerId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from state
+        setMarkers(prev => prev.filter(m => m.id !== markerId));
+        
+        // Remove visual marker from map
+        if (markersRef.current[markerId]) {
+          markersRef.current[markerId].remove();
+          delete markersRef.current[markerId];
+        }
+        
+        console.log('Marker deleted:', markerId);
+      } else {
+        console.error('Failed to delete marker:', response.status);
+        alert('Failed to delete marker. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting marker:', error);
+      alert('Error deleting marker. Please try again.');
     }
   };
 
@@ -431,6 +470,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                       size="sm"
                       className="w-6 h-6 p-0"
                       title="Delete marker"
+                      onClick={() => deleteMarker(marker.id)}
                     >
                       <span className="material-icons text-xs">delete</span>
                     </Button>
