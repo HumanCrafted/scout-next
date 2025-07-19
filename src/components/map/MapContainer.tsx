@@ -48,10 +48,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [editMarkerLat, setEditMarkerLat] = useState('');
   const [editMarkerLng, setEditMarkerLng] = useState('');
   
-  // File management state
-  const [maps, setMaps] = useState<{id: string, title: string, markers: Marker[], collapsed: boolean}[]>([]);
-  const [activeMapIndex, setActiveMapIndex] = useState(0);
-  const [markersCollapsed, setMarkersCollapsed] = useState(false);
+  // Multi-map state
+  const [maps, setMaps] = useState<{id: string, title: string, markers: Marker[], isActive: boolean}[]>([]);
+  const [activeMapId, setActiveMapId] = useState<string | null>(null);
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
@@ -125,7 +124,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load team data from API
+  // Load all team maps from API
   const loadTeamData = async () => {
     if (!currentTeam) return;
 
@@ -136,18 +135,27 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         const data = await response.json();
         
         if (data.maps && data.maps.length > 0) {
-          const defaultMap = data.maps[0];
-          setMapId(defaultMap.id);
-          setMarkers(defaultMap.markers || []);
-          if (defaultMap.title && !defaultMap.title.includes('Team Map')) {
-            setMapTitle(defaultMap.title);
-          }
+          // Set up maps with first one as active
+          const mapsWithActiveState = data.maps.map((map: any, index: number) => ({
+            id: map.id,
+            title: map.title && !map.title.includes('Team Map') ? map.title : 'Untitled Map',
+            markers: map.markers || [],
+            isActive: index === 0 // First map is active
+          }));
+          
+          setMaps(mapsWithActiveState);
+          const activeMap = mapsWithActiveState[0];
+          setActiveMapId(activeMap.id);
+          setMapId(activeMap.id);
+          setMarkers(activeMap.markers);
+          setMapTitle(activeMap.title);
+          
           // Render existing markers on the map
-          if (defaultMap.markers && defaultMap.markers.length > 0) {
-            renderExistingMarkers(defaultMap.markers);
+          if (activeMap.markers && activeMap.markers.length > 0) {
+            renderExistingMarkers(activeMap.markers);
             // Zoom to fit all markers
             setTimeout(() => {
-              fitMapToMarkers(defaultMap.markers);
+              fitMapToMarkers(activeMap.markers);
             }, 100);
           }
         } else {
@@ -183,8 +191,17 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       
       if (response.ok) {
         const data = await response.json();
-        setMapId(data.map.id);
-        setMarkers(data.map.markers || []);
+        const newMap = {
+          id: data.map.id,
+          title: 'Untitled Map',
+          markers: [],
+          isActive: true
+        };
+        setMaps([newMap]);
+        setActiveMapId(newMap.id);
+        setMapId(newMap.id);
+        setMarkers([]);
+        setMapTitle('Untitled Map');
       } else {
         console.error('Failed to create default map:', response.status);
       }
@@ -318,6 +335,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             setMarkers(prev => prev.map(m => 
               m.id === marker.id 
                 ? { ...m, lat: lngLat.lat, lng: lngLat.lng }
+                : m
+            ));
+            
+            // Update maps state
+            setMaps(prev => prev.map(m => 
+              m.isActive 
+                ? { 
+                    ...m, 
+                    markers: m.markers.map(mapMarker => 
+                      mapMarker.id === marker.id 
+                        ? { ...mapMarker, lat: lngLat.lat, lng: lngLat.lng }
+                        : mapMarker
+                    )
+                  }
                 : m
             ));
           } else {
@@ -490,6 +521,52 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
+  // Switch to a different map
+  const switchToMap = async (targetMapId: string) => {
+    if (targetMapId === activeMapId) return; // Already active
+
+    try {
+      // Find the target map
+      const targetMap = maps.find(m => m.id === targetMapId);
+      if (!targetMap) return;
+
+      // Clear current visual markers
+      Object.values(markersRef.current).forEach(marker => marker.remove());
+      markersRef.current = {};
+
+      // Update active states
+      setMaps(prev => prev.map(m => ({
+        ...m,
+        isActive: m.id === targetMapId
+      })));
+
+      // Switch to new map
+      setActiveMapId(targetMapId);
+      setMapId(targetMapId);
+      setMarkers(targetMap.markers);
+      setMapTitle(targetMap.title);
+
+      // Render new map's markers
+      if (targetMap.markers && targetMap.markers.length > 0) {
+        renderExistingMarkers(targetMap.markers);
+        setTimeout(() => {
+          fitMapToMarkers(targetMap.markers);
+        }, 100);
+      } else {
+        // Reset to default view if no markers
+        if (map.current) {
+          map.current.flyTo({
+            center: [-98.5795, 39.8283],
+            zoom: 4.2,
+            speed: 1.5
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error switching maps:', error);
+    }
+  };
+
   // Create new map (doesn't overwrite current)
   const startNewMap = async () => {
     if (!currentTeam) return;
@@ -512,12 +589,25 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       
       if (response.ok) {
         const data = await response.json();
+        const newMap = {
+          id: data.map.id,
+          title: 'Untitled Map',
+          markers: [],
+          isActive: true
+        };
+        
+        // Add to maps list and make it active
+        setMaps(prev => [
+          ...prev.map(m => ({ ...m, isActive: false })), // Deactivate all others
+          newMap // Add new active map
+        ]);
         
         // Clear current map visual state and switch to new map
         Object.values(markersRef.current).forEach(marker => marker.remove());
         markersRef.current = {};
+        setActiveMapId(newMap.id);
+        setMapId(newMap.id);
         setMarkers([]);
-        setMapId(data.map.id);
         setMapTitle('Untitled Map');
         
         if (map.current) {
@@ -547,6 +637,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       if (response.ok) {
         // Remove from state
         setMarkers(prev => prev.filter(m => m.id !== markerId));
+        
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { ...m, markers: m.markers.filter(marker => marker.id !== markerId) }
+            : m
+        ));
         
         // Remove visual marker from map
         if (markersRef.current[markerId]) {
@@ -682,6 +779,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         const marker = data.marker;
         setMarkers(prev => [...prev, marker]);
         
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive ? { ...m, markers: [...m.markers, marker] } : m
+        ));
+        
         // Create custom marker element based on type
         const el = document.createElement('div');
         el.className = `custom-marker ${type}`;
@@ -792,11 +894,10 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             <Button 
               variant="outline" 
               size="sm"
-              onClick={startNewMap}
               className="h-6 w-6 p-0"
-              title="Start new map"
+              title="Settings"
             >
-              <span className="material-symbols-outlined" style={{fontSize: '14px'}}>edit_square</span>
+              <span className="material-icons" style={{fontSize: '14px'}}>settings</span>
             </Button>
           </div>
         </div>
@@ -811,97 +912,112 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
         {/* Maps/Files Section */}
         <div className="flex-1 px-1 py-3">
+          {/* Maps Header */}
+          <div className="flex items-center justify-between mb-3 px-2">
+            <h4 className="text-xs font-medium text-muted-foreground">MAPS</h4>
+            <button 
+              className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+              onClick={startNewMap}
+              title="Add new map"
+            >
+              <span className="material-icons" style={{fontSize: '12px'}}>add</span>
+            </button>
+          </div>
           <div className="space-y-2">
-            {/* Current Map */}
-            <div className="space-y-1">
-              <div className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
-                <div className="flex items-center flex-1 min-w-0">
-                  <button 
-                    className="mr-2 p-0.5 hover:bg-muted-foreground/10 rounded"
-                    title="Collapse/expand markers"
-                    onClick={() => setMarkersCollapsed(!markersCollapsed)}
-                  >
-                    <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
-                      {markersCollapsed ? 'chevron_right' : 'expand_more'}
+            {maps.map((mapItem) => (
+              <div key={mapItem.id} className="space-y-1">
+                {/* Map Header */}
+                <div className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
+                  <div className="flex items-center flex-1 min-w-0">
+                    <button 
+                      className="mr-2 p-0.5 hover:bg-muted-foreground/10 rounded"
+                      title={mapItem.isActive ? "Collapse markers" : "Switch to this map"}
+                      onClick={() => mapItem.isActive ? null : switchToMap(mapItem.id)}
+                    >
+                      <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
+                        {mapItem.isActive ? 'expand_more' : 'chevron_right'}
+                      </span>
+                    </button>
+                    <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '16px'}}>
+                      map
                     </span>
-                  </button>
-                  <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '16px'}}>
-                    map
-                  </span>
-                  <span 
-                    className="text-sm text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                    onClick={editMapTitle}
-                    title="Click to edit map name"
-                  >
-                    {mapTitle}
-                  </span>
+                    <span 
+                      className={`text-sm cursor-pointer hover:text-primary transition-colors truncate ${
+                        mapItem.isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
+                      }`}
+                      onClick={() => mapItem.isActive ? editMapTitle() : switchToMap(mapItem.id)}
+                      title={mapItem.isActive ? "Click to edit map name" : "Click to switch to this map"}
+                    >
+                      {mapItem.title}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{mapItem.markers.length}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{markers.length}</span>
-              </div>
-              
-              {/* Markers as children */}
-              {!markersCollapsed && (
-                <div className="ml-4 space-y-1">
-                  {markers.length === 0 ? (
-                    <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
-                  ) : (
-                    markers.map((marker) => (
-                      <div key={marker.id} className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
-                            {marker.type === 'search' ? 'place' : 
-                             marker.type === 'location' ? 'location_on' :
-                             marker.type === 'device' ? 'memory' : 'build'}
-                          </span>
-                          <span 
-                            className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                            title="Click to center on marker"
-                            onClick={() => centerOnMarker(marker)}
-                          >
-                            {marker.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            title={marker.locked ? 'Unlock marker' : 'Lock marker'}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>
-                              {marker.locked ? 'lock' : 'lock_open'}
+                
+                {/* Markers as children - only show for active map */}
+                {mapItem.isActive && (
+                  <div className="ml-4 space-y-0.5">
+                    {mapItem.markers.length === 0 ? (
+                      <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
+                    ) : (
+                      mapItem.markers.map((marker) => (
+                        <div key={marker.id} className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
+                          <div className="flex items-center flex-1 min-w-0">
+                            <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                              {marker.type === 'search' ? 'place' : 
+                               marker.type === 'location' ? 'location_on' :
+                               marker.type === 'device' ? 'memory' : 'build'}
                             </span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            title="Edit marker"
-                            onClick={() => editMarker(marker)}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            title="Delete marker"
-                            onClick={() => deleteMarker(marker.id)}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
-                          </Button>
+                            <span 
+                              className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                              title="Click to center on marker"
+                              onClick={() => centerOnMarker(marker)}
+                            >
+                              {marker.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              title={marker.locked ? 'Unlock marker' : 'Lock marker'}
+                            >
+                              <span className="material-icons" style={{fontSize: '12px'}}>
+                                {marker.locked ? 'lock' : 'lock_open'}
+                              </span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              title="Edit marker"
+                              onClick={() => editMarker(marker)}
+                            >
+                              <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              title="Delete marker"
+                              onClick={() => deleteMarker(marker.id)}
+                            >
+                              <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-2 py-3 border-t border-border space-y-1">
+        <div className="px-2 py-3 border-t border-border">
           <button 
             className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
             style={{fontSize: '0.75rem', fontWeight: '500'}}
@@ -909,14 +1025,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
             Screenshot Mode
-          </button>
-          <button 
-            onClick={onLogout}
-            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
-            style={{fontSize: '0.75rem', fontWeight: '500'}}
-          >
-            <span className="material-icons mr-3" style={{fontSize: '14px'}}>logout</span>
-            Logout
           </button>
         </div>
       </div>
