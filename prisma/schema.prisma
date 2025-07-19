@@ -1,0 +1,97 @@
+// Scout v2 Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Teams table
+model Team {
+  id           String   @id @default(cuid())
+  name         String   @unique // URL slug: 'masen', 'move', etc.
+  displayName  String   // Human-readable name
+  passwordHash String   // Hashed team password
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  maps         Map[]
+  sessions     TeamSession[]
+
+  @@map("teams")
+}
+
+// Team sessions for authentication
+model TeamSession {
+  id              String   @id @default(cuid())
+  teamId          String
+  sessionToken    String   @unique
+  userIdentifier  String?  // Optional user tracking
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+
+  // Relations
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_sessions")
+}
+
+// Maps table
+model Map {
+  id        String   @id @default(cuid())
+  teamId    String
+  title     String
+  centerLat Float?
+  centerLng Float?
+  zoom      Float?
+  style     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  markers   Marker[]
+
+  @@map("maps")
+}
+
+// Markers table
+model Marker {
+  id          String   @id @default(cuid())
+  mapId       String
+  label       String
+  lat         Float
+  lng         Float
+  type        String
+  zoneNumber  Int?
+  deviceIcon  String?
+  assetIcon   String?
+  locked      Boolean  @default(false)
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  map         Map      @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  parent      Marker?  @relation("MarkerHierarchy", fields: [parentId], references: [id])
+  children    Marker[] @relation("MarkerHierarchy")
+
+  @@map("markers")
+}
+
+// Action history for undo/redo
+model ActionHistory {
+  id              String   @id @default(cuid())
+  mapId           String
+  actionType      String
+  payload         Json
+  userIdentifier  String?  // Track who made the action
+  createdAt       DateTime @default(now())
+
+  @@map("action_history")
+}
