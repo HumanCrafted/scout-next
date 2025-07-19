@@ -35,7 +35,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [mapTitle, setMapTitle] = useState('Untitled Map');
   const [zoom, setZoom] = useState(4.2);
   const [currentStyle, setCurrentStyle] = useState<'satellite' | 'street'>('satellite');
-  const [labelsVisible, setLabelsVisible] = useState(false);
+  const [labelsVisible, setLabelsVisible] = useState(true);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const mapIdRef = useRef<string | null>(null);
   
