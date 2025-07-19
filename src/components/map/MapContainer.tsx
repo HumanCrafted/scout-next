@@ -23,6 +23,8 @@ export default function MapContainer({ className }: MapContainerProps) {
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [mapId, setMapId] = useState<string | null>(null);
+  const [isPlacementMode, setIsPlacementMode] = useState(false);
+  const [pendingMarkerLabel, setPendingMarkerLabel] = useState('');
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   // Get current team
@@ -54,8 +56,30 @@ export default function MapContainer({ className }: MapContainerProps) {
 
       // Load team's maps and markers when map is ready
       map.current.on('load', loadTeamData);
+
+      // Add click handler for marker placement
+      map.current.on('click', handleMapClick);
     }
   }, []);
+
+  // Handle map clicks for marker placement
+  const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
+    if (!isPlacementMode || !pendingMarkerLabel) return;
+
+    const { lng, lat } = e.lngLat;
+    
+    // Place the marker
+    handleAddMarkerAtLocation({
+      label: pendingMarkerLabel,
+      lat,
+      lng,
+      type: 'location'
+    });
+
+    // Exit placement mode
+    setIsPlacementMode(false);
+    setPendingMarkerLabel('');
+  };
 
   // Load team data from API
   const loadTeamData = async () => {
@@ -109,8 +133,8 @@ export default function MapContainer({ className }: MapContainerProps) {
     }
   };
 
-  // Add marker to map and database
-  const handleAddMarker = async (newMarker: { label: string; lat: number; lng: number; type: string }) => {
+  // Add marker at specific location to map and database
+  const handleAddMarkerAtLocation = async (newMarker: { label: string; lat: number; lng: number; type: string }) => {
     if (!mapId) return;
 
     try {
@@ -185,6 +209,25 @@ export default function MapContainer({ className }: MapContainerProps) {
     });
   }, [markers]);
 
+  // Toggle placement mode
+  const handleTogglePlacementMode = () => {
+    setIsPlacementMode(!isPlacementMode);
+    if (!isPlacementMode) {
+      // Entering placement mode - we'll get the label from MarkerControls
+    } else {
+      // Exiting placement mode
+      setPendingMarkerLabel('');
+    }
+  };
+
+  // Update map cursor style based on placement mode
+  useEffect(() => {
+    if (map.current) {
+      const canvas = map.current.getCanvas();
+      canvas.style.cursor = isPlacementMode ? 'crosshair' : '';
+    }
+  }, [isPlacementMode]);
+
   return (
     <div className="relative w-full h-full">
       <div 
@@ -194,9 +237,14 @@ export default function MapContainer({ className }: MapContainerProps) {
       {currentTeam && (
         <MarkerControls
           markers={markers}
-          onAddMarker={handleAddMarker}
+          onStartPlacement={(label) => {
+            setPendingMarkerLabel(label);
+            setIsPlacementMode(true);
+          }}
           onDeleteMarker={handleDeleteMarker}
           teamName={currentTeam.displayName}
+          isPlacementMode={isPlacementMode}
+          onTogglePlacementMode={handleTogglePlacementMode}
         />
       )}
     </div>

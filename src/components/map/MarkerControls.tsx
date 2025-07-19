@@ -14,33 +14,33 @@ interface Marker {
 
 interface MarkerControlsProps {
   markers: Marker[];
-  onAddMarker: (marker: { label: string; lat: number; lng: number; type: string }) => void;
+  onStartPlacement: (label: string) => void;
   onDeleteMarker: (id: string) => void;
   teamName: string;
+  isPlacementMode: boolean;
+  onTogglePlacementMode: () => void;
 }
 
 export default function MarkerControls({ 
   markers, 
-  onAddMarker, 
+  onStartPlacement, 
   onDeleteMarker, 
-  teamName 
+  teamName,
+  isPlacementMode,
+  onTogglePlacementMode
 }: MarkerControlsProps) {
   const [newMarkerLabel, setNewMarkerLabel] = useState('');
-  const [isAddingMarker, setIsAddingMarker] = useState(false);
 
-  const handleAddMarker = () => {
+  const handleStartPlacement = () => {
     if (!newMarkerLabel.trim()) return;
+    onStartPlacement(newMarkerLabel);
+  };
 
-    // Add marker at center of map (will be improved later with click placement)
-    onAddMarker({
-      label: newMarkerLabel,
-      lat: 40.0,
-      lng: -74.5,
-      type: 'location'
-    });
-
+  const handleCancelPlacement = () => {
     setNewMarkerLabel('');
-    setIsAddingMarker(false);
+    if (isPlacementMode) {
+      onTogglePlacementMode();
+    }
   };
 
   return (
@@ -50,37 +50,34 @@ export default function MarkerControls({
         
         {/* Add Marker Section */}
         <div className="space-y-2">
-          {!isAddingMarker ? (
-            <Button 
-              onClick={() => setIsAddingMarker(true)}
-              className="w-full"
-            >
-              Add Marker
-            </Button>
+          {isPlacementMode ? (
+            <div className="space-y-2">
+              <div className="p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                <strong>Click on the map</strong> to place &ldquo;{newMarkerLabel}&rdquo;
+              </div>
+              <Button 
+                onClick={handleCancelPlacement}
+                variant="outline" 
+                className="w-full"
+              >
+                Cancel Placement
+              </Button>
+            </div>
           ) : (
             <div className="space-y-2">
               <Input
-                placeholder="Marker label"
+                placeholder="Enter marker label"
                 value={newMarkerLabel}
                 onChange={(e) => setNewMarkerLabel(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddMarker()}
-                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleStartPlacement()}
               />
-              <div className="flex gap-2">
-                <Button onClick={handleAddMarker} size="sm">
-                  Add
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setIsAddingMarker(false);
-                    setNewMarkerLabel('');
-                  }}
-                  variant="outline" 
-                  size="sm"
-                >
-                  Cancel
-                </Button>
-              </div>
+              <Button 
+                onClick={handleStartPlacement}
+                disabled={!newMarkerLabel.trim()}
+                className="w-full"
+              >
+                Click to Place Marker
+              </Button>
             </div>
           )}
         </div>
