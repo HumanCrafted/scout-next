@@ -59,3 +59,43 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mapbox Search Box Styling */
+mapbox-search-box {
+  --mapbox-search-font-size: 14px;
+  --mapbox-search-border-radius: 6px;
+  --mapbox-search-border-color: hsl(214.3 31.8% 91.4%);
+  --mapbox-search-background-color: hsl(0 0% 100%);
+  --mapbox-search-text-color: hsl(222.2 84% 4.9%);
+  --mapbox-search-placeholder-color: hsl(215.4 16.3% 46.9%);
+  --mapbox-search-focus-border-color: hsl(222.2 84% 4.9%);
+  --mapbox-search-focus-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1);
+}
+
+mapbox-search-box input {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 1px solid hsl(214.3 31.8% 91.4%) !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
+  background: hsl(0 0% 100%) !important;
+  color: hsl(222.2 84% 4.9%) !important;
+  transition: border-color 0.2s !important;
+}
+
+/* Hide the default search icon to prevent overlap */
+mapbox-search-box .mapbox-search-icon,
+mapbox-search-box [data-testid="search-icon"],
+mapbox-search-box svg,
+mapbox-search-box .search-icon {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+mapbox-search-box input:focus {
+  outline: none !important;
+  border-color: hsl(222.2 84% 4.9%) !important;
+  box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1) !important;
+}

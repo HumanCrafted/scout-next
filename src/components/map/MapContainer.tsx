@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getCurrentTeam } from '@/lib/auth';
 
+// Add Mapbox Search Box types
+declare global {
+  interface Window {
+    MapboxSearchBox: any;
+  }
+}
+
 interface Marker {
   id: string;
   label: string;
@@ -37,6 +44,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [labelsVisible, setLabelsVisible] = useState(false);
   const [lastSearchLocation, setLastSearchLocation] = useState<{lng: number; lat: number; zoom: number} | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const searchBoxRef = useRef<HTMLDivElement>(null);
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
@@ -89,6 +97,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           console.log('Map loaded successfully');
           updateZoom();
           loadTeamData();
+          initializeSearchBox();
           
           // Debug container dimensions
           if (mapContainer.current) {
@@ -190,6 +199,142 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         zoom: lastSearchLocation.zoom,
         speed: 2.0
       });
+    }
+  };
+
+  // Initialize Mapbox Search Box
+  const initializeSearchBox = () => {
+    if (!searchBoxRef.current || !window.MapboxSearchBox) return;
+
+    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    if (!token) return;
+
+    try {
+      console.log('Initializing Mapbox Search Box...');
+      
+      const searchBox = new window.MapboxSearchBox();
+      searchBox.accessToken = token;
+      searchBox.placeholder = 'Search for address or coordinates...';
+      searchBox.country = 'US';
+      searchBox.language = 'en';
+      
+      if (map.current) {
+        searchBox.proximity = map.current.getCenter();
+      }
+
+      // Add search box to the DOM
+      searchBoxRef.current.appendChild(searchBox);
+
+      // Handle search results
+      searchBox.addEventListener('retrieve', handleSearchResult);
+      searchBox.addEventListener('select', handleSearchResult);
+      searchBox.addEventListener('suggestion', handleSearchResult);
+
+      // Handle coordinate search with Enter key
+      searchBox.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          const input = (e.target as HTMLInputElement)?.value;
+          if (input && handleCoordinateSearch(input)) {
+            e.preventDefault();
+            (e.target as HTMLInputElement).value = '';
+          }
+        }
+      });
+
+      console.log('Search box initialized successfully');
+    } catch (error) {
+      console.error('Error initializing search box:', error);
+    }
+  };
+
+  // Handle direct GPS coordinate input
+  const handleCoordinateSearch = (input: string): boolean => {
+    const coordPattern = /^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/;
+    const match = input.trim().match(coordPattern);
+    
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        console.log('Direct coordinate search:', { lat, lng });
+        
+        setLastSearchLocation({ lng, lat, zoom: 16 });
+        
+        if (map.current) {
+          map.current.flyTo({ 
+            center: [lng, lat], 
+            zoom: 16,
+            speed: 2.0
+          });
+        }
+        
+        const label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        addMarkerToMap(lng, lat, label, 'location', undefined, undefined, undefined);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Handle search results from Mapbox Search Box
+  const handleSearchResult = (data: any) => {
+    console.log('Search result:', data);
+    
+    let feature = null;
+    
+    if (data.detail) {
+      const detail = data.detail;
+      
+      // Handle FeatureCollection from retrieve event
+      if (detail.type === 'FeatureCollection' && detail.features && detail.features.length > 0) {
+        feature = detail.features[0];
+      }
+      // Handle single feature from select event
+      else if (detail.geometry && detail.geometry.coordinates) {
+        feature = detail;
+      }
+    }
+    
+    if (feature && feature.geometry && feature.geometry.coordinates) {
+      const [lng, lat] = feature.geometry.coordinates;
+      
+      // Build full address from available properties
+      let placeName = '';
+      const props = feature.properties || {};
+      
+      if (props.full_address) {
+        placeName = props.full_address;
+      } else if (props.place_name) {
+        placeName = props.place_name;
+      } else {
+        // Build address from components
+        const addressParts = [];
+        if (props.address) addressParts.push(props.address);
+        if (props.name && props.name !== props.address) addressParts.push(props.name);
+        if (props.place) addressParts.push(props.place);
+        if (props.district) addressParts.push(props.district);
+        if (props.locality) addressParts.push(props.locality);
+        if (props.region) addressParts.push(props.region);
+        if (props.postcode) addressParts.push(props.postcode);
+        if (props.country) addressParts.push(props.country);
+        
+        placeName = addressParts.length > 0 ? addressParts.join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+      
+      console.log('Extracted place name:', placeName);
+      
+      setLastSearchLocation({ lng, lat, zoom: 16 });
+      
+      if (map.current) {
+        map.current.flyTo({ 
+          center: [lng, lat], 
+          zoom: 16,
+          speed: 2.0
+        });
+      }
+      
+      addMarkerToMap(lng, lat, placeName, 'location', undefined, undefined, undefined);
     }
   };
 
@@ -405,8 +550,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           
           {/* Search Box */}
           <div className="mb-4">
-            <Input
-              placeholder="Search for address or coordinates..."
+            <div 
+              ref={searchBoxRef}
               className="w-full"
             />
           </div>
