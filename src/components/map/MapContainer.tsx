@@ -301,19 +301,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
       }
       
-      // Create popup
+      // Create popup with nice styling
       const popup = new mapboxgl.Popup({ 
         offset: [25, 0],
         anchor: 'left',
         closeButton: false,
-        closeOnClick: false
-      }).setHTML(`<div style="font-weight: 500;">${marker.label}</div>`);
+        closeOnClick: false,
+        className: 'marker-popup'
+      }).setHTML(`<div style="
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      ">${marker.label}</div>`);
       
       // Add marker to map
       const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: !marker.locked })
         .setLngLat([marker.lng, marker.lat])
         .setPopup(popup)
         .addTo(map.current!);
+        
+      // Show popup immediately if labels are visible
+      if (labelsVisible) {
+        popup.addTo(map.current!);
+      }
       
       // Add drag end event to update position in database
       mapboxMarker.on('dragend', async () => {
@@ -833,7 +848,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           // Update popup content
           const popup = mapboxMarker.getPopup();
           if (popup) {
-            popup.setHTML(`<div style="font-weight: 500;">${editMarkerName.trim()}</div>`);
+            popup.setHTML(`<div style="
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: 500;
+              white-space: nowrap;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            ">${editMarkerName.trim()}</div>`);
           }
         }
         
@@ -940,19 +964,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
         
-        // Create popup
+        // Create popup with nice styling
         const popup = new mapboxgl.Popup({ 
           offset: [25, 0],
           anchor: 'left',
           closeButton: false,
-          closeOnClick: false
-        }).setHTML(`<div style="font-weight: 500;">${label}</div>`);
+          closeOnClick: false,
+          className: 'marker-popup'
+        }).setHTML(`<div style="
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          white-space: nowrap;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">${label}</div>`);
         
         // Add marker to map
         const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: true })
           .setLngLat([lng, lat])
           .setPopup(popup)
           .addTo(map.current);
+          
+        // Show popup immediately if labels are visible
+        if (labelsVisible) {
+          popup.addTo(map.current!);
+        }
         
         // Add drag end event to update position in database
         mapboxMarker.on('dragend', async () => {
@@ -1151,7 +1190,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Footer */}
-        <div className="px-2 py-3 border-t border-border space-y-1">
+        <div className="px-2 py-3 border-t border-border space-y-0.5">
           <button 
             className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
             style={{fontSize: '0.75rem', fontWeight: '500'}}
@@ -1257,7 +1296,22 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           variant={labelsVisible ? 'default' : 'outline'}
           size="sm"
           className="text-xs px-2 py-1 h-auto"
-          onClick={() => setLabelsVisible(!labelsVisible)}
+          onClick={() => {
+            const newLabelsVisible = !labelsVisible;
+            setLabelsVisible(newLabelsVisible);
+            
+            // Toggle popups for all current markers
+            Object.values(markersRef.current).forEach(marker => {
+              const popup = marker.getPopup();
+              if (popup) {
+                if (newLabelsVisible) {
+                  popup.addTo(map.current!);
+                } else {
+                  popup.remove();
+                }
+              }
+            });
+          }}
         >
           Labels
         </Button>
@@ -1269,15 +1323,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           onClick={fitAllMarkers}
         >
           Fit All
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs px-2 py-1 h-auto"
-          title="Help & Tutorial"
-          onClick={() => window.open('https://masen.craft.me/scout-help', '_blank')}
-        >
-          <span className="text-sm font-bold">?</span>
         </Button>
       </div>
 
