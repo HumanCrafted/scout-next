@@ -713,16 +713,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         {/* Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-semibold text-foreground">Scout</h1>
+            <h1 className="text-lg font-semibold text-foreground">{teamName}</h1>
             <Button 
               variant="outline" 
               size="sm"
-              onClick={editMapTitle}
-              className="h-6 px-2 text-xs"
-              title="Edit map title"
+              onClick={startNewMap}
+              className="h-6 w-6 p-0"
+              title="Start new map"
             >
-              <span className="material-icons mr-1" style={{fontSize: '12px'}}>edit</span>
-              Edit
+              <span className="material-icons" style={{fontSize: '14px'}}>edit_square</span>
             </Button>
           </div>
           <h2 
@@ -742,41 +741,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           />
         </div>
 
-        {/* Actions Section */}
-        <div className="p-4 border-b border-border">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Actions</h3>
-          <div className="space-y-1">
-            <button 
-              onClick={startNewMap}
-              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
-            >
-              <span className="material-icons mr-3" style={{fontSize: '16px'}}>add</span>
-              Start New Map
-            </button>
-            <button 
-              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
-              title="Save/load map data"
-            >
-              <span className="material-icons mr-3" style={{fontSize: '16px'}}>save</span>
-              Save/Load Map
-            </button>
-            <button 
-              onClick={fitAllMarkers}
-              disabled={markers.length === 0}
-              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="material-icons mr-3" style={{fontSize: '16px'}}>center_focus_strong</span>
-              Fit All Markers
-            </button>
-            <button 
-              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
-              title="Screenshot mode"
-            >
-              <span className="material-icons mr-3" style={{fontSize: '16px'}}>photo_camera</span>
-              Screenshot Mode
-            </button>
-          </div>
-        </div>
 
         {/* Markers Section */}
         <div className="flex-1 p-4">
@@ -841,7 +805,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-1">
+          <button 
+            className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+            title="Screenshot mode"
+          >
+            <span className="material-icons mr-3" style={{fontSize: '16px'}}>photo_camera</span>
+            Screenshot Mode
+          </button>
           <Button 
             variant="ghost" 
             size="sm" 
