@@ -521,6 +521,65 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
+  // Delete a map
+  const deleteMap = async (mapId: string) => {
+    const mapToDelete = maps.find(m => m.id === mapId);
+    if (!mapToDelete) return;
+
+    const confirmDelete = confirm(
+      `Are you sure you want to delete "${mapToDelete.title}"?\n\n` +
+      `This will permanently remove the map and all ${mapToDelete.markers.length} marker(s).\n\n` +
+      'This action cannot be undone.'
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`/api/maps/${mapId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from maps state
+        const remainingMaps = maps.filter(m => m.id !== mapId);
+        setMaps(remainingMaps);
+
+        // If we deleted the active map, switch to another or create new
+        if (mapToDelete.isActive) {
+          if (remainingMaps.length > 0) {
+            // Switch to first remaining map
+            const newActiveMap = remainingMaps[0];
+            setMaps(prev => prev.map(m => ({
+              ...m,
+              isActive: m.id === newActiveMap.id
+            })));
+            setActiveMapId(newActiveMap.id);
+            setMapId(newActiveMap.id);
+            setMarkers(newActiveMap.markers);
+            setMapTitle(newActiveMap.title);
+
+            // Clear and render new markers
+            Object.values(markersRef.current).forEach(marker => marker.remove());
+            markersRef.current = {};
+            if (newActiveMap.markers.length > 0) {
+              renderExistingMarkers(newActiveMap.markers);
+              setTimeout(() => fitMapToMarkers(newActiveMap.markers), 100);
+            }
+          } else {
+            // No maps left, create a new default one
+            await createDefaultMap();
+          }
+        }
+      } else {
+        console.error('Failed to delete map:', response.status);
+        alert('Failed to delete map. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting map:', error);
+      alert('Error deleting map. Please try again.');
+    }
+  };
+
   // Switch to a different map
   const switchToMap = async (targetMapId: string) => {
     if (targetMapId === activeMapId) return; // Already active
@@ -668,10 +727,39 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Save map title
   const saveMapTitle = async () => {
-    if (editTitleValue.trim() !== '') {
-      setMapTitle(editTitleValue.trim());
-      // TODO: Save to database
-      setIsEditTitleModalOpen(false);
+    if (editTitleValue.trim() !== '' && mapId) {
+      const newTitle = editTitleValue.trim();
+      
+      try {
+        // Update in database
+        const response = await fetch(`/api/maps/${mapId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: newTitle,
+          }),
+        });
+
+        if (response.ok) {
+          // Update local state
+          setMapTitle(newTitle);
+          
+          // Update maps array
+          setMaps(prev => prev.map(m => 
+            m.isActive ? { ...m, title: newTitle } : m
+          ));
+          
+          setIsEditTitleModalOpen(false);
+        } else {
+          console.error('Failed to update map title:', response.status);
+          alert('Failed to update map title. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error updating map title:', error);
+        alert('Error updating map title. Please try again.');
+      }
     }
   };
 
@@ -916,11 +1004,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           <div className="flex items-center justify-between mb-3 px-2">
             <h4 className="text-xs font-medium text-muted-foreground">MAPS</h4>
             <button 
-              className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+              className="h-5 w-5 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '12px'}}>add</span>
+              <span className="material-icons" style={{fontSize: '14px'}}>add</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -951,7 +1039,23 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                       {mapItem.title}
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{mapItem.markers.length}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{mapItem.markers.length}</span>
+                    {maps.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                        title="Delete map"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMap(mapItem.id);
+                        }}
+                      >
+                        <span className="material-icons" style={{fontSize: '10px'}}>delete</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Markers as children - only show for active map */}
