@@ -464,30 +464,50 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
-  // Start new map
-  const startNewMap = () => {
-    if (markers.length > 0) {
-      const confirmNew = confirm(
-        `You have ${markers.length} marker(s) currently placed.\n\n` +
-        'Starting a new map will clear all current work.\n\n' +
-        'Do you want to continue?'
-      );
-      
-      if (!confirmNew) return;
-    }
-    
-    // Clear everything and reset
-    Object.values(markersRef.current).forEach(marker => marker.remove());
-    markersRef.current = {};
-    setMarkers([]);
-    setMapTitle('Untitled Map');
-    
-    if (map.current) {
-      map.current.flyTo({
-        center: [-98.5795, 39.8283],
-        zoom: 4.2,
-        speed: 1.5
+  // Create new map (doesn't overwrite current)
+  const startNewMap = async () => {
+    if (!currentTeam) return;
+
+    try {
+      const response = await fetch('/api/maps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamName: currentTeam.name,
+          title: 'Untitled Map',
+          centerLat: 39.8283,
+          centerLng: -98.5795,
+          zoom: 4.2,
+          style: 'mapbox://styles/nginear/clkd3dq69005u01qk6q7a6z7r'
+        }),
       });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Clear current map visual state and switch to new map
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+        setMarkers([]);
+        setMapId(data.map.id);
+        setMapTitle('Untitled Map');
+        
+        if (map.current) {
+          map.current.flyTo({
+            center: [-98.5795, 39.8283],
+            zoom: 4.2,
+            speed: 1.5
+          });
+        }
+      } else {
+        console.error('Failed to create new map:', response.status);
+        alert('Failed to create new map. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating new map:', error);
+      alert('Error creating new map. Please try again.');
     }
   };
 
@@ -739,7 +759,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Maps/Files Section */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 px-2 py-4">
           <div className="space-y-2">
             {/* Current Map */}
             <div className="space-y-1">
@@ -768,7 +788,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               </div>
               
               {/* Markers as children */}
-              <div className="ml-6 space-y-1">
+              <div className="ml-4 space-y-1">
                 {markers.length === 0 ? (
                   <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
                 ) : (
@@ -792,30 +812,30 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-5 w-5 p-0"
+                          className="h-6 w-6 p-0"
                           title={marker.locked ? 'Unlock marker' : 'Lock marker'}
                         >
-                          <span className="material-icons" style={{fontSize: '10px'}}>
+                          <span className="material-icons" style={{fontSize: '12px'}}>
                             {marker.locked ? 'lock' : 'lock_open'}
                           </span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-5 w-5 p-0"
+                          className="h-6 w-6 p-0"
                           title="Edit marker"
                           onClick={() => editMarker(marker)}
                         >
-                          <span className="material-icons" style={{fontSize: '10px'}}>edit</span>
+                          <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                           title="Delete marker"
                           onClick={() => deleteMarker(marker.id)}
                         >
-                          <span className="material-icons" style={{fontSize: '10px'}}>delete</span>
+                          <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
                         </Button>
                       </div>
                     </div>
