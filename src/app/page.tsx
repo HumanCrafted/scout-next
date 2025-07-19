@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { loginTeam } from '@/lib/auth';
 
 export default function Home() {
   const [teamName, setTeamName] = useState('');
@@ -12,41 +13,26 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // Valid teams and their passwords
-  const teams = {
-    'masen': 'masen2025'
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    const teamLower = teamName.toLowerCase().trim();
-    
-    // Check if team exists
-    if (!teams[teamLower as keyof typeof teams]) {
-      setError('Team not found');
+    try {
+      const result = await loginTeam(teamName.trim(), password);
+      
+      if (result.success && result.team) {
+        // Redirect to team workspace
+        router.push(`/${result.team.name}`);
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An unexpected error occurred');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Check password
-    if (teams[teamLower as keyof typeof teams] !== password) {
-      setError('Invalid password');
-      setIsLoading(false);
-      return;
-    }
-
-    // Create session for the team
-    const sessionData = {
-      team: teamLower,
-      expires: new Date().getTime() + (24 * 60 * 60 * 1000)
-    };
-    localStorage.setItem(`${teamLower}-session`, JSON.stringify(sessionData));
-
-    // Redirect to team workspace
-    router.push(`/${teamLower}`);
   };
 
   return (

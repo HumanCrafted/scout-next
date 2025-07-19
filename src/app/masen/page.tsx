@@ -4,56 +4,57 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import MapContainer from '@/components/map/MapContainer';
+import { validateSession, loginTeam, logoutTeam, getCurrentTeam } from '@/lib/auth';
 
 export default function MasenTeamPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-
-  const teamPassword = 'masen2025';
+  const router = useRouter();
 
   // Check for existing session on load
   useEffect(() => {
-    const session = localStorage.getItem('masen-session');
-    if (session) {
-      try {
-        const sessionData = JSON.parse(session);
-        const now = new Date().getTime();
-        if (sessionData.expires > now) {
+    const checkAuth = async () => {
+      const currentTeam = getCurrentTeam();
+      if (currentTeam && currentTeam.name === 'masen') {
+        // Validate session with server
+        const { valid } = await validateSession();
+        if (valid) {
           setIsAuthenticated(true);
-        } else {
-          localStorage.removeItem('masen-session');
         }
-      } catch {
-        localStorage.removeItem('masen-session');
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password === teamPassword) {
-      // Create session (expires in 24 hours)
-      const sessionData = {
-        team: 'masen',
-        expires: new Date().getTime() + (24 * 60 * 60 * 1000)
-      };
-      localStorage.setItem('masen-session', JSON.stringify(sessionData));
-      setIsAuthenticated(true);
-    } else {
-      setError('Invalid password');
+    try {
+      const result = await loginTeam('masen', password);
+      
+      if (result.success) {
+        setIsAuthenticated(true);
+      } else {
+        setError(result.error || 'Invalid password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An unexpected error occurred');
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('masen-session');
+  const handleLogout = async () => {
+    await logoutTeam();
     setIsAuthenticated(false);
     setPassword('');
+    router.push('/');
   };
 
   if (isLoading) {
