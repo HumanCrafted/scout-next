@@ -47,33 +47,50 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     // Get token from environment variable
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
     
+    console.log('Mapbox token check:', token ? 'Token found' : 'No token found');
+    console.log('Environment:', process.env.NODE_ENV);
+    
     if (!token) {
-      console.error('Mapbox access token is required');
+      console.error('Mapbox access token is required. Please set NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN');
       return;
     }
 
     mapboxgl.accessToken = token;
 
     if (mapContainer.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: [-98.5795, 39.8283], // Center of United States
-        zoom: 4.2,
-      });
+      console.log('Creating Mapbox map...');
+      try {
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/satellite-streets-v12',
+          center: [-98.5795, 39.8283], // Center of United States
+          zoom: 4.2,
+        });
 
-      // Update zoom display
-      const updateZoom = () => {
-        if (map.current) {
-          setZoom(Math.round(map.current.getZoom() * 10) / 10);
-        }
-      };
+        console.log('Map created successfully');
 
-      map.current.on('zoom', updateZoom);
-      map.current.on('load', () => {
-        updateZoom();
-        loadTeamData();
-      });
+        // Update zoom display
+        const updateZoom = () => {
+          if (map.current) {
+            setZoom(Math.round(map.current.getZoom() * 10) / 10);
+          }
+        };
+
+        map.current.on('zoom', updateZoom);
+        map.current.on('load', () => {
+          console.log('Map loaded successfully');
+          updateZoom();
+          loadTeamData();
+        });
+        
+        map.current.on('error', (e) => {
+          console.error('Map error:', e);
+        });
+      } catch (error) {
+        console.error('Error creating map:', error);
+      }
+    } else {
+      console.error('Map container not found');
     }
   }, []);
 
