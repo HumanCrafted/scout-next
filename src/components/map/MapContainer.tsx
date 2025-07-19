@@ -330,7 +330,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       }
       
       // Store popup reference for toggling
-      (mapboxMarker as any)._customPopup = popup;
+      (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
       
       // Add drag end event to update position in database
       mapboxMarker.on('dragend', async () => {
@@ -848,7 +848,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         if (mapboxMarker) {
           mapboxMarker.setLngLat([lng, lat]);
           // Update popup content using custom popup storage
-          const popup = (mapboxMarker as any)._customPopup;
+          const popup = (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup;
           if (popup) {
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
@@ -995,7 +995,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         }
         
         // Store popup reference for toggling
-        (mapboxMarker as any)._customPopup = popup;
+        (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
         
         // Add drag end event to update position in database
         mapboxMarker.on('dragend', async () => {
@@ -1306,7 +1306,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             
             // Toggle popups for all current markers using custom popup storage
             Object.values(markersRef.current).forEach(marker => {
-              const popup = (marker as any)._customPopup;
+              const popup = (marker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup;
               if (popup) {
                 if (newLabelsVisible) {
                   popup.addTo(map.current!);
