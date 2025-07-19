@@ -26,6 +26,7 @@ interface MapContainerProps {
 }
 
 export default function MapContainer({ teamName, onLogout }: MapContainerProps) {
+  console.log('MapContainer rendering with new v1 layout');
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
