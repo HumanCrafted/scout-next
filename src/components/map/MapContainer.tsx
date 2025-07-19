@@ -1017,17 +1017,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="px-2 py-3 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-foreground">{teamName.split(' ')[0]}</h1>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="h-6 w-6 p-0"
-              title="Settings"
-            >
-              <span className="material-icons" style={{fontSize: '14px'}}>settings</span>
-            </Button>
-          </div>
+          <h1 className="text-lg font-semibold text-foreground">{teamName.split(' ')[0]}</h1>
         </div>
 
         {/* Search */}
@@ -1161,7 +1151,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Footer */}
-        <div className="px-2 py-3 border-t border-border">
+        <div className="px-2 py-3 border-t border-border space-y-1">
           <button 
             className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
             style={{fontSize: '0.75rem', fontWeight: '500'}}
@@ -1169,6 +1159,31 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
             Screenshot Mode
+          </button>
+          <button 
+            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
+            style={{fontSize: '0.75rem', fontWeight: '500'}}
+            title="Settings"
+          >
+            <span className="material-icons mr-3" style={{fontSize: '14px'}}>settings</span>
+            Settings
+          </button>
+          <button 
+            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
+            style={{fontSize: '0.75rem', fontWeight: '500'}}
+            title="Help & Tutorial"
+            onClick={() => window.open('https://masen.craft.me/scout-help', '_blank')}
+          >
+            <span className="material-icons mr-3" style={{fontSize: '14px'}}>help</span>
+            Help
+          </button>
+          <button 
+            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
+            style={{fontSize: '0.75rem', fontWeight: '500'}}
+            title="Recently deleted maps"
+          >
+            <span className="material-icons mr-3" style={{fontSize: '14px'}}>delete</span>
+            Recently Deleted
           </button>
         </div>
       </div>
