@@ -325,12 +325,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         .addTo(map.current!);
         
       // Show popup immediately if labels are visible
+      console.log('renderExistingMarkers - labelsVisible:', labelsVisible, 'for marker:', marker.label);
       if (labelsVisible) {
+        console.log('Adding popup to map for:', marker.label);
         popup.addTo(map.current!);
       }
       
       // Store popup reference for toggling
       (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
+      console.log('Stored popup reference for:', marker.label);
       
       // Add drag end event to update position in database
       mapboxMarker.on('dragend', async () => {
@@ -990,12 +993,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           .addTo(map.current);
           
         // Show popup immediately if labels are visible
+        console.log('addMarkerToMap - labelsVisible:', labelsVisible, 'for marker:', label);
         if (labelsVisible) {
+          console.log('Adding popup to map for new marker:', label);
           popup.addTo(map.current!);
         }
         
         // Store popup reference for toggling
         (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
+        console.log('Stored popup reference for new marker:', label);
         
         // Add drag end event to update position in database
         mapboxMarker.on('dragend', async () => {
@@ -1302,15 +1308,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           className="text-xs px-2 py-1 h-auto"
           onClick={() => {
             const newLabelsVisible = !labelsVisible;
+            console.log('Labels toggle clicked. Current:', labelsVisible, 'New:', newLabelsVisible);
+            console.log('Number of markers in markersRef:', Object.keys(markersRef.current).length);
             setLabelsVisible(newLabelsVisible);
             
             // Toggle popups for all current markers using custom popup storage
-            Object.values(markersRef.current).forEach(marker => {
+            Object.values(markersRef.current).forEach((marker, index) => {
               const popup = (marker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup;
+              console.log(`Marker ${index}:`, popup ? 'has popup' : 'NO POPUP');
               if (popup) {
                 if (newLabelsVisible) {
+                  console.log(`Adding popup ${index} to map`);
                   popup.addTo(map.current!);
                 } else {
+                  console.log(`Removing popup ${index} from map`);
                   popup.remove();
                 }
               }
