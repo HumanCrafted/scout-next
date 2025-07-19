@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getCurrentTeam } from '@/lib/auth';
 
 
@@ -17,7 +20,6 @@ interface Marker {
   deviceIcon?: string;
   assetIcon?: string;
   locked?: boolean;
-  isSearchResult?: boolean;
 }
 
 interface MapContainerProps {
@@ -26,7 +28,6 @@ interface MapContainerProps {
 }
 
 export default function MapContainer({ teamName, onLogout }: MapContainerProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
-  console.log('MapContainer rendering with new v1 layout');
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -35,8 +36,17 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [zoom, setZoom] = useState(4.2);
   const [currentStyle, setCurrentStyle] = useState<'satellite' | 'street'>('satellite');
   const [labelsVisible, setLabelsVisible] = useState(false);
-  const [lastSearchLocation, setLastSearchLocation] = useState<{lng: number; lat: number; zoom: number} | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const mapIdRef = useRef<string | null>(null);
+  
+  // Modal states
+  const [isEditTitleModalOpen, setIsEditTitleModalOpen] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
+  const [isEditMarkerModalOpen, setIsEditMarkerModalOpen] = useState(false);
+  const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
+  const [editMarkerName, setEditMarkerName] = useState('');
+  const [editMarkerLat, setEditMarkerLat] = useState('');
+  const [editMarkerLng, setEditMarkerLng] = useState('');
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
@@ -46,8 +56,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     assetIcon?: string;
   } | null>(null);
 
-  // Get current team
-  const currentTeam = getCurrentTeam();
+  // Get current team - memoize to prevent unnecessary re-renders
+  const currentTeam = useMemo(() => getCurrentTeam(), []);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    mapIdRef.current = mapId;
+  }, [mapId]);
 
 
   useEffect(() => {
@@ -56,8 +71,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     // Get token from environment variable
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
     
-    console.log('Mapbox token check:', token ? 'Token found' : 'No token found');
-    console.log('Environment:', process.env.NODE_ENV);
     
     if (!token) {
       console.error('Mapbox access token is required. Please set NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN');
@@ -67,7 +80,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     mapboxgl.accessToken = token;
 
     if (mapContainer.current) {
-      console.log('Creating Mapbox map...');
       try {
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
@@ -76,7 +88,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           zoom: 4.2,
         });
 
-        console.log('Map created successfully');
 
         // Update zoom display
         const updateZoom = () => {
@@ -86,22 +97,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         };
 
         map.current.on('zoom', updateZoom);
+        
         map.current.on('load', () => {
-          console.log('Map loaded successfully');
           updateZoom();
           loadTeamData();
           initializeSearchBox();
           
-          // Debug container dimensions
-          if (mapContainer.current) {
-            const rect = mapContainer.current.getBoundingClientRect();
-            console.log('Map container dimensions:', rect.width, 'x', rect.height);
-          }
-          
           // Force resize after a short delay
           setTimeout(() => {
             if (map.current) {
-              console.log('Forcing map resize...');
               map.current.resize();
             }
           }, 100);
@@ -113,45 +117,39 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       } catch (error) {
         console.error('Error creating map:', error);
       }
-    } else {
-      console.error('Map container not found');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load team data from API
   const loadTeamData = async () => {
-    console.log('loadTeamData called, currentTeam:', currentTeam);
-    if (!currentTeam) {
-      console.error('No currentTeam available');
-      return;
-    }
+    if (!currentTeam) return;
 
     try {
-      console.log('Fetching maps for team:', currentTeam.name);
       const response = await fetch(`/api/maps?team=${currentTeam.name}`);
-      console.log('API response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('API response data:', data);
         
         if (data.maps && data.maps.length > 0) {
           const defaultMap = data.maps[0];
-          console.log('Found existing map:', defaultMap.id);
           setMapId(defaultMap.id);
           setMarkers(defaultMap.markers || []);
           if (defaultMap.title) {
             setMapTitle(defaultMap.title);
           }
-          console.log('Map ID set to:', defaultMap.id);
+          // Render existing markers on the map
+          if (defaultMap.markers && defaultMap.markers.length > 0) {
+            renderExistingMarkers(defaultMap.markers);
+            // Zoom to fit all markers
+            setTimeout(() => {
+              fitMapToMarkers(defaultMap.markers);
+            }, 100);
+          }
         } else {
-          console.log('No maps found, creating default map');
           await createDefaultMap();
         }
       } else {
-        console.error('API response not ok:', response.status);
-        const errorData = await response.json();
-        console.error('Error data:', errorData);
+        console.error('Failed to load team maps:', response.status);
       }
     } catch (error) {
       console.error('Error loading team data:', error);
@@ -160,14 +158,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Create default map for team
   const createDefaultMap = async () => {
-    console.log('createDefaultMap called, currentTeam:', currentTeam);
-    if (!currentTeam) {
-      console.error('No currentTeam available for creating default map');
-      return;
-    }
+    if (!currentTeam) return;
 
     try {
-      console.log('Creating default map for team:', currentTeam.name);
       const response = await fetch('/api/maps', {
         method: 'POST',
         headers: {
@@ -182,23 +175,131 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           style: 'mapbox://styles/nginear/clkd3dq69005u01qk6q7a6z7r'
         }),
       });
-
-      console.log('Create map response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Create map response data:', data);
         setMapId(data.map.id);
         setMarkers(data.map.markers || []);
-        console.log('Default map created with ID:', data.map.id);
       } else {
-        console.error('Create map response not ok:', response.status);
-        const errorData = await response.json();
-        console.error('Create map error data:', errorData);
+        console.error('Failed to create default map:', response.status);
       }
     } catch (error) {
       console.error('Error creating default map:', error);
     }
+  };
+
+  // Fit map to show all markers with padding
+  const fitMapToMarkers = (markers: Marker[]) => {
+    if (!map.current || markers.length === 0) return;
+    
+    if (markers.length === 1) {
+      // For single marker, center on it with a reasonable zoom
+      const marker = markers[0];
+      map.current.flyTo({
+        center: [marker.lng, marker.lat],
+        zoom: 14,
+        speed: 1.5
+      });
+      return;
+    }
+    
+    // Calculate bounds for multiple markers
+    let minLng = markers[0].lng;
+    let maxLng = markers[0].lng;
+    let minLat = markers[0].lat;
+    let maxLat = markers[0].lat;
+    
+    markers.forEach(marker => {
+      minLng = Math.min(minLng, marker.lng);
+      maxLng = Math.max(maxLng, marker.lng);
+      minLat = Math.min(minLat, marker.lat);
+      maxLat = Math.max(maxLat, marker.lat);
+    });
+    
+    // Create bounds with padding
+    const bounds = new mapboxgl.LngLatBounds([minLng, minLat], [maxLng, maxLat]);
+    
+    map.current.fitBounds(bounds, {
+      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      speed: 1.5,
+      maxZoom: 16 // Don't zoom too close even for nearby markers
+    });
+  };
+
+  // Render existing markers on the map (for page refresh)
+  const renderExistingMarkers = (markers: Marker[]) => {
+    if (!map.current) return;
+    
+    markers.forEach(marker => {
+      // Create custom marker element based on type
+      const el = document.createElement('div');
+      el.className = `custom-marker ${marker.type}`;
+      el.style.cssText = `
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        border: 2px solid rgba(255,255,255,0.8);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      `;
+      
+      // Set background color and content based on type
+      if (marker.type === 'search') {
+        // Search result pin - use location_on icon like v1
+        el.style.backgroundColor = 'rgb(243, 243, 243)';
+        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+        el.innerHTML = '<span class="material-icons" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
+      } else if (marker.type === 'location') {
+        el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
+        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+        el.style.color = 'hsl(210 40% 98%)';
+        el.textContent = marker.zoneNumber?.toString() || 'L';
+      } else if (marker.type === 'device') {
+        el.style.backgroundColor = 'rgb(243, 243, 243)';
+        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+        const icon = marker.deviceIcon || 'memory';
+        
+        if (icon === 'solar-panel') {
+          el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
+            <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+          </svg>`;
+        } else {
+          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+        }
+      } else if (marker.type === 'assets') {
+        el.style.backgroundColor = 'rgb(243, 243, 243)';
+        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+        const icon = marker.assetIcon || 'build';
+        el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+      }
+      
+      // Create popup
+      const popup = new mapboxgl.Popup({ 
+        offset: [25, 0],
+        anchor: 'left',
+        closeButton: false,
+        closeOnClick: false
+      }).setHTML(`<div style="font-weight: 500;">${marker.label}</div>`);
+      
+      // Add marker to map
+      const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: !marker.locked })
+        .setLngLat([marker.lng, marker.lat])
+        .setPopup(popup)
+        .addTo(map.current!);
+      
+      // Add drag end event
+      mapboxMarker.on('dragend', () => {
+        // TODO: Update marker position in database
+      });
+      
+      markersRef.current[marker.id] = mapboxMarker;
+    });
   };
 
   // Toggle map style
@@ -213,21 +314,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     map.current.setStyle(styleUrl);
   };
 
-  // Re-center to last search location
-  const recenterToSearch = () => {
-    if (lastSearchLocation && map.current) {
-      map.current.flyTo({
-        center: [lastSearchLocation.lng, lastSearchLocation.lat],
-        zoom: lastSearchLocation.zoom,
-        speed: 2.0
-      });
+  // Fit all markers (like page refresh does)
+  const fitAllMarkers = () => {
+    if (markers.length > 0) {
+      fitMapToMarkers(markers);
     }
   };
 
 
   // Handle geocoding search using Mapbox Geocoding API
   const handleGeocodingSearch = async (query: string) => {
-    console.log('Geocoding search for:', query);
     const token = mapboxgl.accessToken || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
     if (!token) {
       console.error('No token available for geocoding');
@@ -251,11 +347,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         const [lng, lat] = feature.center;
         const placeName = feature.place_name || query;
         
-        console.log('Geocoding result:', placeName, 'at', lng, lat);
-        console.log('About to add marker...');
-        
-        setLastSearchLocation({ lng, lat, zoom: 16 });
-        
         if (map.current) {
           map.current.flyTo({ 
             center: [lng, lat], 
@@ -264,10 +355,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           });
         }
         
-        await addMarkerToMap(lng, lat, placeName, 'location', undefined, undefined, undefined);
-        console.log('Marker should be added now');
+        await addMarkerToMap(lng, lat, placeName, 'search', undefined, undefined, undefined);
       } else {
-        console.warn('No geocoding results found for:', query);
         alert('No results found for: ' + query);
       }
     } catch (error) {
@@ -286,10 +375,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       const lng = parseFloat(match[2]);
       
       if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        console.log('Direct coordinate search:', { lat, lng });
-        
-        setLastSearchLocation({ lng, lat, zoom: 16 });
-        
         if (map.current) {
           map.current.flyTo({ 
             center: [lng, lat], 
@@ -299,7 +384,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         }
         
         const label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        addMarkerToMap(lng, lat, label, 'location', undefined, undefined, undefined);
+        addMarkerToMap(lng, lat, label, 'search', undefined, undefined, undefined);
         return true;
       }
     }
@@ -334,6 +419,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     searchContainer.appendChild(searchInput);
   };
 
+  // Center map on a specific marker
+  const centerOnMarker = (marker: Marker) => {
+    if (map.current) {
+      map.current.flyTo({
+        center: [marker.lng, marker.lat],
+        zoom: 16,
+        speed: 2.0
+      });
+    }
+  };
 
   // Clear all markers
   const clearMarkers = async () => {
@@ -358,8 +453,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         Object.values(markersRef.current).forEach(marker => marker.remove());
         markersRef.current = {};
         setMarkers([]);
-        
-        console.log('All markers cleared from database');
       } catch (error) {
         console.error('Error clearing markers:', error);
         alert('Error clearing markers. Please try again.');
@@ -384,7 +477,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     markersRef.current = {};
     setMarkers([]);
     setMapTitle('Untitled Map');
-    setLastSearchLocation(null);
     
     if (map.current) {
       map.current.flyTo({
@@ -411,8 +503,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           markersRef.current[markerId].remove();
           delete markersRef.current[markerId];
         }
-        
-        console.log('Marker deleted:', markerId);
       } else {
         console.error('Failed to delete marker:', response.status);
         alert('Failed to delete marker. Please try again.');
@@ -425,18 +515,90 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Edit map title
   const editMapTitle = () => {
-    const newTitle = prompt('Enter map title:', mapTitle);
-    if (newTitle && newTitle.trim() !== '') {
-      setMapTitle(newTitle.trim());
+    setEditTitleValue(mapTitle);
+    setIsEditTitleModalOpen(true);
+  };
+
+  // Save map title
+  const saveMapTitle = async () => {
+    if (editTitleValue.trim() !== '') {
+      setMapTitle(editTitleValue.trim());
       // TODO: Save to database
+      setIsEditTitleModalOpen(false);
+    }
+  };
+
+  // Edit marker
+  const editMarker = (marker: Marker) => {
+    setEditingMarker(marker);
+    setEditMarkerName(marker.label);
+    setEditMarkerLat(marker.lat.toString());
+    setEditMarkerLng(marker.lng.toString());
+    setIsEditMarkerModalOpen(true);
+  };
+
+  // Save marker changes
+  const saveMarkerEdit = async () => {
+    if (!editingMarker || !editMarkerName.trim()) return;
+    
+    const lat = parseFloat(editMarkerLat);
+    const lng = parseFloat(editMarkerLng);
+    
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      alert('Please enter valid coordinates (lat: -90 to 90, lng: -180 to 180)');
+      return;
+    }
+
+    try {
+      // Update in database
+      const response = await fetch(`/api/markers/${editingMarker.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          label: editMarkerName.trim(),
+          lat,
+          lng,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMarkers(prev => prev.map(m => 
+          m.id === editingMarker.id 
+            ? { ...m, label: editMarkerName.trim(), lat, lng }
+            : m
+        ));
+        
+        // Update visual marker position
+        const mapboxMarker = markersRef.current[editingMarker.id];
+        if (mapboxMarker) {
+          mapboxMarker.setLngLat([lng, lat]);
+          // Update popup content
+          const popup = mapboxMarker.getPopup();
+          if (popup) {
+            popup.setHTML(`<div style="font-weight: 500;">${editMarkerName.trim()}</div>`);
+          }
+        }
+        
+        setIsEditMarkerModalOpen(false);
+        setEditingMarker(null);
+      } else {
+        console.error('Failed to update marker:', response.status);
+        alert('Failed to update marker. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating marker:', error);
+      alert('Error updating marker. Please try again.');
     }
   };
 
   // Add marker to map and database
-  const addMarkerToMap = async (lng: number, lat: number, label: string, type: string, zoneNumber?: number, deviceIcon?: string, assetIcon?: string) => {
-    console.log('addMarkerToMap called with:', { lng, lat, label, type, mapId: mapId, mapExists: !!map.current });
+  const addMarkerToMap = useCallback(async (lng: number, lat: number, label: string, type: string, zoneNumber?: number, deviceIcon?: string, assetIcon?: string) => {
+    const currentMapId = mapIdRef.current;
     
-    if (!mapId) {
+    if (!currentMapId) {
       console.error('No mapId available for adding marker');
       return;
     }
@@ -454,7 +616,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mapId,
+          mapId: currentMapId,
           label,
           lat,
           lng,
@@ -489,7 +651,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         `;
         
         // Set background color and content based on type
-        if (type === 'location') {
+        if (type === 'search') {
+          // Search result pin - use location_on icon like v1
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          el.innerHTML = '<span class="material-icons" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
+        } else if (type === 'location') {
           el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
           el.style.color = 'hsl(210 40% 98%)';
@@ -529,102 +696,142 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         
         // Add drag end event
         mapboxMarker.on('dragend', () => {
-          const lngLat = mapboxMarker.getLngLat();
           // TODO: Update marker position in database
-          console.log('Marker moved to:', lngLat.lng, lngLat.lat);
         });
         
         markersRef.current[marker.id] = mapboxMarker;
-        console.log('Added marker:', label, 'at', lng, lat);
       }
     } catch (error) {
       console.error('Error adding marker:', error);
     }
-  };
+  }, []);
 
   return (
     <div className="relative h-screen">
       {/* Left Sidebar */}
-      <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto p-4 box-border flex flex-col">
-        {/* Controls Section */}
-        <div className="mb-6">
-          <Button 
-            onClick={startNewMap}
-            className="w-full mb-4"
-          >
-            Start New Map
-          </Button>
-          
-          {/* Search Box */}
-          <div className="mb-4">
-            <div 
-              id="search-box"
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Map Title Section */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 
-              className="flex-1 m-0 cursor-pointer text-xl font-semibold text-foreground"
-              onClick={editMapTitle}
-              title="Click to edit title"
-            >
-              {mapTitle}
-            </h2>
+      <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-lg font-semibold text-foreground">Scout</h1>
             <Button 
               variant="outline" 
               size="sm"
               onClick={editMapTitle}
-              className="w-6 h-6 p-0"
+              className="h-6 px-2 text-xs"
               title="Edit map title"
             >
-              <span className="material-icons text-xs">edit</span>
+              <span className="material-icons mr-1" style={{fontSize: '12px'}}>edit</span>
+              Edit
             </Button>
           </div>
-          
-          <h3 className="text-base font-semibold mb-3 text-foreground">Placed Markers</h3>
-          <div className="space-y-2">
+          <h2 
+            className="text-base font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
+            onClick={editMapTitle}
+            title="Click to edit title"
+          >
+            {mapTitle}
+          </h2>
+        </div>
+
+        {/* Search */}
+        <div className="p-4 border-b border-border">
+          <div 
+            id="search-box"
+            className="w-full"
+          />
+        </div>
+
+        {/* Actions Section */}
+        <div className="p-4 border-b border-border">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Actions</h3>
+          <div className="space-y-1">
+            <button 
+              onClick={startNewMap}
+              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+            >
+              <span className="material-icons mr-3" style={{fontSize: '16px'}}>add</span>
+              Start New Map
+            </button>
+            <button 
+              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+              title="Save/load map data"
+            >
+              <span className="material-icons mr-3" style={{fontSize: '16px'}}>save</span>
+              Save/Load Map
+            </button>
+            <button 
+              onClick={fitAllMarkers}
+              disabled={markers.length === 0}
+              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-icons mr-3" style={{fontSize: '16px'}}>center_focus_strong</span>
+              Fit All Markers
+            </button>
+            <button 
+              className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+              title="Screenshot mode"
+            >
+              <span className="material-icons mr-3" style={{fontSize: '16px'}}>photo_camera</span>
+              Screenshot Mode
+            </button>
+          </div>
+        </div>
+
+        {/* Markers Section */}
+        <div className="flex-1 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Markers</h3>
+            <span className="text-xs text-muted-foreground">{markers.length}</span>
+          </div>
+          <div className="space-y-1">
             {markers.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No markers placed</div>
+              <div className="text-sm text-muted-foreground py-4 text-center">No markers placed</div>
             ) : (
               markers.map((marker) => (
-                <div key={marker.id} className="flex items-center justify-between py-2 text-sm">
-                  <span 
-                    className="flex-1 cursor-pointer text-foreground"
-                    title="Click to center on marker"
-                  >
-                    {marker.label}
-                  </span>
-                  <div className="flex gap-1">
+                <div key={marker.id} className="group flex items-center justify-between px-2 py-2 hover:bg-muted rounded-md transition-colors">
+                  <div className="flex items-center flex-1 min-w-0">
+                    <span className="material-icons mr-3 text-muted-foreground" style={{fontSize: '16px'}}>
+                      {marker.type === 'search' ? 'place' : 
+                       marker.type === 'location' ? 'location_on' :
+                       marker.type === 'device' ? 'memory' : 'build'}
+                    </span>
+                    <span 
+                      className="text-sm text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                      title="Click to center on marker"
+                      onClick={() => centerOnMarker(marker)}
+                    >
+                      {marker.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="w-6 h-6 p-0"
+                      className="h-6 w-6 p-0"
                       title={marker.locked ? 'Unlock marker' : 'Lock marker'}
                     >
-                      <span className="material-icons text-xs">
+                      <span className="material-icons" style={{fontSize: '12px'}}>
                         {marker.locked ? 'lock' : 'lock_open'}
                       </span>
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="w-6 h-6 p-0"
+                      className="h-6 w-6 p-0"
                       title="Edit marker"
+                      onClick={() => editMarker(marker)}
                     >
-                      <span className="material-icons text-xs">edit</span>
+                      <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="ghost"
                       size="sm"
-                      className="w-6 h-6 p-0"
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                       title="Delete marker"
                       onClick={() => deleteMarker(marker.id)}
                     >
-                      <span className="material-icons text-xs">delete</span>
+                      <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
                     </Button>
                   </div>
                 </div>
@@ -633,29 +840,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           </div>
         </div>
 
-        {/* Bottom Actions */}
-        <div className="mt-auto pt-4">
-          <div className="flex gap-2">
-            <Button 
-              className="flex-1"
-              title="Click to save map, drag file here to load"
-            >
-              Save/Load Map
-            </Button>
-            <Button 
-              variant="outline"
-              className="w-10 h-9 p-0"
-              title="Enter screenshot mode - hides UI, shows all labels"
-            >
-              <span className="material-icons text-lg">photo_camera</span>
-            </Button>
-          </div>
+        {/* Footer */}
+        <div className="p-4 border-t border-border">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="sm" 
             onClick={onLogout}
-            className="w-full mt-2"
+            className="w-full justify-start"
           >
+            <span className="material-icons mr-3" style={{fontSize: '16px'}}>logout</span>
             Logout
           </Button>
         </div>
@@ -735,18 +928,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           Labels
         </Button>
         <Button
+          variant="outline"
           size="sm"
           className="text-xs px-3 py-1 h-auto"
-          disabled={!lastSearchLocation}
-          onClick={recenterToSearch}
+          disabled={markers.length === 0}
+          onClick={fitAllMarkers}
         >
-          Re-center
+          Fit All
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="text-xs px-2 py-1 h-auto"
           title="Help & Tutorial"
+          onClick={() => window.open('https://masen.craft.me/scout-help', '_blank')}
         >
           <span className="text-sm font-bold">?</span>
         </Button>
@@ -800,7 +995,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">memory</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>memory</span>
             </div>
             <div
               className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
@@ -817,7 +1012,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">wifi</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>wifi</span>
             </div>
             <div
               className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
@@ -860,7 +1055,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">build</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>build</span>
             </div>
             <div
               className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
@@ -877,7 +1072,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">lan</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>lan</span>
             </div>
             <div
               className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
@@ -894,7 +1089,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">warning</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>warning</span>
             </div>
             <div
               className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
@@ -911,7 +1106,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 setDraggedPinType(null);
               }}
             >
-              <span className="material-icons text-base">power</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>power</span>
             </div>
           </div>
         </div>
@@ -925,6 +1120,106 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           Clear
         </Button>
       </div>
+
+      {/* Edit Map Title Modal */}
+      <Dialog open={isEditTitleModalOpen} onOpenChange={setIsEditTitleModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Map Title</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="map-title" className="text-right">
+                Title
+              </Label>
+              <Input
+                id="map-title"
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value)}
+                className="col-span-3"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveMapTitle();
+                  } else if (e.key === 'Escape') {
+                    setIsEditTitleModalOpen(false);
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditTitleModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveMapTitle}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Marker Modal */}
+      <Dialog open={isEditMarkerModalOpen} onOpenChange={setIsEditMarkerModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Marker</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="marker-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="marker-name"
+                value={editMarkerName}
+                onChange={(e) => setEditMarkerName(e.target.value)}
+                className="col-span-3"
+                placeholder="Enter marker name"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="marker-lat" className="text-right">
+                Latitude
+              </Label>
+              <Input
+                id="marker-lat"
+                value={editMarkerLat}
+                onChange={(e) => setEditMarkerLat(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., 40.7128"
+                type="number"
+                step="any"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="marker-lng" className="text-right">
+                Longitude
+              </Label>
+              <Input
+                id="marker-lng"
+                value={editMarkerLng}
+                onChange={(e) => setEditMarkerLng(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., -74.0060"
+                type="number"
+                step="any"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveMarkerEdit();
+                  } else if (e.key === 'Escape') {
+                    setIsEditMarkerModalOpen(false);
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditMarkerModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveMarkerEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
