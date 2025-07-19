@@ -168,7 +168,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         },
         body: JSON.stringify({
           teamName: currentTeam.name,
-          title: mapTitle,
+          title: 'Untitled Map',
           centerLat: 39.8283,
           centerLng: -98.5795,
           zoom: 4.2,
@@ -721,7 +721,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               className="h-6 w-6 p-0"
               title="Start new map"
             >
-              <span className="material-icons" style={{fontSize: '14px'}}>edit_square</span>
+              <span className="material-icons-outlined" style={{fontSize: '14px'}}>edit_square</span>
             </Button>
           </div>
           <h2 
@@ -806,13 +806,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
         {/* Footer */}
         <div className="p-4 border-t border-border space-y-1">
-          <button 
-            className="w-full flex items-center px-2 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full justify-start"
             title="Screenshot mode"
           >
             <span className="material-icons mr-3" style={{fontSize: '16px'}}>photo_camera</span>
             Screenshot Mode
-          </button>
+          </Button>
           <Button 
             variant="ghost" 
             size="sm" 
