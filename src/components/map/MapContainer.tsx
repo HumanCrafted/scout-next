@@ -136,7 +136,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         
         if (data.maps && data.maps.length > 0) {
           // Set up maps with first one as active
-          const mapsWithActiveState = data.maps.map((map: any, index: number) => ({
+          const mapsWithActiveState = data.maps.map((map: {id: string, title: string, markers: Marker[]}, index: number) => ({
             id: map.id,
             title: map.title && !map.title.includes('Team Map') ? map.title : 'Untitled Map',
             markers: map.markers || [],
