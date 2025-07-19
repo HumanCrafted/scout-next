@@ -37,6 +37,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [labelsVisible, setLabelsVisible] = useState(false);
   const [lastSearchLocation, setLastSearchLocation] = useState<{lng: number; lat: number; zoom: number} | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  
+  // Drag and drop state
+  const [draggedPinType, setDraggedPinType] = useState<{
+    type: string;
+    zoneNumber?: number;
+    deviceIcon?: string;
+    assetIcon?: string;
+  } | null>(null);
 
   // Get current team
   const currentTeam = getCurrentTeam();
@@ -243,6 +251,106 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
+  // Add marker to map and database
+  const addMarkerToMap = async (lng: number, lat: number, label: string, type: string, zoneNumber?: number, deviceIcon?: string, assetIcon?: string) => {
+    if (!mapId || !map.current) return;
+
+    try {
+      // Add to database
+      const response = await fetch('/api/markers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mapId,
+          label,
+          lat,
+          lng,
+          type,
+          zoneNumber,
+          deviceIcon,
+          assetIcon
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const marker = data.marker;
+        setMarkers(prev => [...prev, marker]);
+        
+        // Create custom marker element based on type
+        const el = document.createElement('div');
+        el.className = `custom-marker ${type}`;
+        el.style.cssText = `
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+          border: 2px solid rgba(255,255,255,0.8);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        
+        // Set background color and content based on type
+        if (type === 'location') {
+          el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          el.style.color = 'hsl(210 40% 98%)';
+          el.textContent = zoneNumber?.toString() || 'L';
+        } else if (type === 'device') {
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          const icon = deviceIcon || 'memory';
+          
+          if (icon === 'solar-panel') {
+            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
+              <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+            </svg>`;
+          } else {
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+          }
+        } else if (type === 'assets') {
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          const icon = assetIcon || 'build';
+          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+        }
+        
+        // Create popup
+        const popup = new mapboxgl.Popup({ 
+          offset: [25, 0],
+          anchor: 'left',
+          closeButton: false,
+          closeOnClick: false
+        }).setHTML(`<div style="font-weight: 500;">${label}</div>`);
+        
+        // Add marker to map
+        const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: true })
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+          .addTo(map.current);
+        
+        // Add drag end event
+        mapboxMarker.on('dragend', () => {
+          const lngLat = mapboxMarker.getLngLat();
+          // TODO: Update marker position in database
+          console.log('Marker moved to:', lngLat.lng, lngLat.lat);
+        });
+        
+        markersRef.current[marker.id] = mapboxMarker;
+        console.log('Added marker:', label, 'at', lng, lat);
+      }
+    } catch (error) {
+      console.error('Error adding marker:', error);
+    }
+  };
+
   return (
     <div className="relative h-screen">
       {/* Left Sidebar */}
@@ -366,6 +474,43 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         ref={mapContainer}
         className="absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full"
         style={{ minHeight: '100vh' }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (!draggedPinType || !map.current) return;
+          
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          
+          const lngLat = map.current.unproject([x, y]);
+          
+          let label;
+          if (draggedPinType.type === 'location') {
+            label = `Location ${draggedPinType.zoneNumber}`;
+          } else if (draggedPinType.type === 'device') {
+            label = 'Device';
+          } else if (draggedPinType.type === 'assets') {
+            label = 'Asset';
+          } else {
+            label = draggedPinType.type.charAt(0).toUpperCase() + draggedPinType.type.slice(1);
+          }
+          
+          addMarkerToMap(
+            lngLat.lng, 
+            lngLat.lat, 
+            label, 
+            draggedPinType.type, 
+            draggedPinType.zoneNumber,
+            draggedPinType.deviceIcon,
+            draggedPinType.assetIcon
+          );
+          
+          setDraggedPinType(null);
+        }}
       />
 
       {/* Bottom Controls */}
@@ -424,9 +569,19 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             {[1,2,3,4,5,6,7,8,9,10].map(num => (
               <div
                 key={num}
-                className="w-8 h-8 bg-foreground border-2 border-border rounded-full cursor-grab flex items-center justify-center text-white text-xs font-bold transition-all hover:bg-foreground/80 hover:scale-105"
+                className="w-8 h-8 bg-foreground border-2 border-border rounded-full cursor-grab flex items-center justify-center text-white text-xs font-bold transition-all hover:bg-foreground/80 hover:scale-105 active:cursor-grabbing"
                 draggable={true}
                 title={`Location ${num}`}
+                onDragStart={(e) => {
+                  setDraggedPinType({
+                    type: 'location',
+                    zoneNumber: num
+                  });
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+                onDragEnd={() => {
+                  setDraggedPinType(null);
+                }}
               >
                 {num}
               </div>
@@ -439,23 +594,53 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           <h4 className="text-xs font-medium mb-2 text-muted-foreground">Devices</h4>
           <div className="flex flex-wrap gap-1">
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Memory Device"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'device',
+                  deviceIcon: 'memory'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">memory</span>
             </div>
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="WiFi Device"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'device',
+                  deviceIcon: 'wifi'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">wifi</span>
             </div>
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Solar Panel"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'device',
+                  deviceIcon: 'solar-panel'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 fill-current">
                 <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
@@ -469,30 +654,70 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           <h4 className="text-xs font-medium mb-2 text-muted-foreground">Assets</h4>
           <div className="flex flex-wrap gap-1">
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Build Tool"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'assets',
+                  assetIcon: 'build'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">build</span>
             </div>
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Network"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'assets',
+                  assetIcon: 'lan'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">lan</span>
             </div>
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Warning"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'assets',
+                  assetIcon: 'warning'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">warning</span>
             </div>
             <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105"
+              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
               draggable={true}
               title="Power"
+              onDragStart={(e) => {
+                setDraggedPinType({
+                  type: 'assets',
+                  assetIcon: 'power'
+                });
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onDragEnd={() => {
+                setDraggedPinType(null);
+              }}
             >
               <span className="material-icons text-base">power</span>
             </div>
