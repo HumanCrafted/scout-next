@@ -306,17 +306,17 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         offset: [25, 0],
         anchor: 'left',
         closeButton: false,
-        closeOnClick: false,
-        className: 'marker-popup'
+        closeOnClick: false
       }).setHTML(`<div style="
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-        white-space: nowrap;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        z-index: 9999 !important;
       ">${marker.label}</div>`);
       
       // Add marker to map
@@ -974,17 +974,17 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           offset: [25, 0],
           anchor: 'left',
           closeButton: false,
-          closeOnClick: false,
-          className: 'marker-popup'
+          closeOnClick: false
         }).setHTML(`<div style="
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: 500;
-          white-space: nowrap;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          background: rgba(0, 0, 0, 0.8) !important;
+          color: white !important;
+          padding: 4px 8px !important;
+          border-radius: 4px !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+          z-index: 9999 !important;
         ">${label}</div>`);
         
         // Add marker to map

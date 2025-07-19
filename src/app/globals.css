@@ -104,3 +104,19 @@ mapbox-search-box input:focus {
   box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1) !important;
 }
 
+/* Mapbox Popup Styling - Ensure popups are visible */
+.mapboxgl-popup {
+  z-index: 9999 !important;
+}
+
+.mapboxgl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.mapboxgl-popup-tip {
+  display: none !important;
+}
+
