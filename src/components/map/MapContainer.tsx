@@ -6,21 +6,6 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
 import { getCurrentTeam } from '@/lib/auth';
 
-// Add Mapbox Search Box types
-declare global {
-  interface Window {
-    MapboxSearchBox: {
-      new(): {
-        accessToken: string;
-        placeholder: string;
-        country: string;
-        language: string;
-        proximity: { lng: number; lat: number };
-        addEventListener: (event: string, handler: (data: any) => void) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
-      };
-    };
-  }
-}
 
 interface Marker {
   id: string;
@@ -40,7 +25,7 @@ interface MapContainerProps {
   onLogout: () => void;
 }
 
-export default function MapContainer({ teamName, onLogout }: MapContainerProps) {
+export default function MapContainer({ teamName, onLogout }: MapContainerProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   console.log('MapContainer rendering with new v1 layout');
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -52,7 +37,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [labelsVisible, setLabelsVisible] = useState(false);
   const [lastSearchLocation, setLastSearchLocation] = useState<{lng: number; lat: number; zoom: number} | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const searchBoxRef = useRef<HTMLDivElement>(null);
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
@@ -64,6 +48,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Get current team
   const currentTeam = getCurrentTeam();
+
 
   useEffect(() => {
     if (map.current) return; // initialize map only once
@@ -86,7 +71,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       try {
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/satellite-streets-v12',
+          style: 'mapbox://styles/nginear/clkd3dq69005u01qk6q7a6z7r', // Custom satellite style from v1
           center: [-98.5795, 39.8283], // Center of United States
           zoom: 4.2,
         });
@@ -131,26 +116,42 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     } else {
       console.error('Map container not found');
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load team data from API
   const loadTeamData = async () => {
-    if (!currentTeam) return;
+    console.log('loadTeamData called, currentTeam:', currentTeam);
+    if (!currentTeam) {
+      console.error('No currentTeam available');
+      return;
+    }
 
     try {
+      console.log('Fetching maps for team:', currentTeam.name);
       const response = await fetch(`/api/maps?team=${currentTeam.name}`);
+      console.log('API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('API response data:', data);
+        
         if (data.maps && data.maps.length > 0) {
           const defaultMap = data.maps[0];
+          console.log('Found existing map:', defaultMap.id);
           setMapId(defaultMap.id);
           setMarkers(defaultMap.markers || []);
           if (defaultMap.title) {
             setMapTitle(defaultMap.title);
           }
+          console.log('Map ID set to:', defaultMap.id);
         } else {
+          console.log('No maps found, creating default map');
           await createDefaultMap();
         }
+      } else {
+        console.error('API response not ok:', response.status);
+        const errorData = await response.json();
+        console.error('Error data:', errorData);
       }
     } catch (error) {
       console.error('Error loading team data:', error);
@@ -159,9 +160,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Create default map for team
   const createDefaultMap = async () => {
-    if (!currentTeam) return;
+    console.log('createDefaultMap called, currentTeam:', currentTeam);
+    if (!currentTeam) {
+      console.error('No currentTeam available for creating default map');
+      return;
+    }
 
     try {
+      console.log('Creating default map for team:', currentTeam.name);
       const response = await fetch('/api/maps', {
         method: 'POST',
         headers: {
@@ -173,14 +179,22 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           centerLat: 39.8283,
           centerLng: -98.5795,
           zoom: 4.2,
-          style: 'mapbox://styles/mapbox/satellite-streets-v12'
+          style: 'mapbox://styles/nginear/clkd3dq69005u01qk6q7a6z7r'
         }),
       });
 
+      console.log('Create map response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Create map response data:', data);
         setMapId(data.map.id);
         setMarkers(data.map.markers || []);
+        console.log('Default map created with ID:', data.map.id);
+      } else {
+        console.error('Create map response not ok:', response.status);
+        const errorData = await response.json();
+        console.error('Create map error data:', errorData);
       }
     } catch (error) {
       console.error('Error creating default map:', error);
@@ -193,7 +207,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     
     setCurrentStyle(style);
     const styleUrl = style === 'satellite' 
-      ? 'mapbox://styles/mapbox/satellite-streets-v12'
+      ? 'mapbox://styles/nginear/clkd3dq69005u01qk6q7a6z7r' // Custom satellite style from v1
       : 'mapbox://styles/mapbox/streets-v12';
     
     map.current.setStyle(styleUrl);
@@ -210,48 +224,55 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
-  // Initialize Mapbox Search Box
-  const initializeSearchBox = () => {
-    if (!searchBoxRef.current || !window.MapboxSearchBox) return;
 
-    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-    if (!token) return;
+  // Handle geocoding search using Mapbox Geocoding API
+  const handleGeocodingSearch = async (query: string) => {
+    console.log('Geocoding search for:', query);
+    const token = mapboxgl.accessToken || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    if (!token) {
+      console.error('No token available for geocoding');
+      return;
+    }
 
     try {
-      console.log('Initializing Mapbox Search Box...');
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=US&limit=1`
+      );
       
-      const searchBox = new window.MapboxSearchBox();
-      searchBox.accessToken = token;
-      searchBox.placeholder = 'Search for address or coordinates...';
-      searchBox.country = 'US';
-      searchBox.language = 'en';
-      
-      if (map.current) {
-        searchBox.proximity = map.current.getCenter();
+      if (!response.ok) {
+        console.error('Geocoding API error:', response.status);
+        return;
       }
-
-      // Add search box to the DOM
-      searchBoxRef.current.appendChild(searchBox);
-
-      // Handle search results
-      searchBox.addEventListener('retrieve', handleSearchResult);
-      searchBox.addEventListener('select', handleSearchResult);
-      searchBox.addEventListener('suggestion', handleSearchResult);
-
-      // Handle coordinate search with Enter key
-      searchBox.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-          const input = (e.target as HTMLInputElement)?.value;
-          if (input && handleCoordinateSearch(input)) {
-            e.preventDefault();
-            (e.target as HTMLInputElement).value = '';
-          }
+      
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0];
+        const [lng, lat] = feature.center;
+        const placeName = feature.place_name || query;
+        
+        console.log('Geocoding result:', placeName, 'at', lng, lat);
+        console.log('About to add marker...');
+        
+        setLastSearchLocation({ lng, lat, zoom: 16 });
+        
+        if (map.current) {
+          map.current.flyTo({ 
+            center: [lng, lat], 
+            zoom: 16,
+            speed: 2.0
+          });
         }
-      });
-
-      console.log('Search box initialized successfully');
+        
+        await addMarkerToMap(lng, lat, placeName, 'location', undefined, undefined, undefined);
+        console.log('Marker should be added now');
+      } else {
+        console.warn('No geocoding results found for:', query);
+        alert('No results found for: ' + query);
+      }
     } catch (error) {
-      console.error('Error initializing search box:', error);
+      console.error('Geocoding search error:', error);
+      alert('Search failed. Please try again.');
     }
   };
 
@@ -285,67 +306,34 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     return false;
   };
 
-  // Handle search results from Mapbox Search Box
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSearchResult = (data: any) => {
-    console.log('Search result:', data);
+  // Initialize simple search input using Geocoding API
+  const initializeSearchBox = () => {
+    const searchContainer = document.getElementById('search-box');
+    if (!searchContainer) return;
     
-    let feature = null;
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search for address or coordinates...';
+    searchInput.className = 'w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring';
     
-    if (data.detail) {
-      const detail = data.detail;
-      
-      // Handle FeatureCollection from retrieve event
-      if (detail.type === 'FeatureCollection' && detail.features && detail.features.length > 0) {
-        feature = detail.features[0];
-      }
-      // Handle single feature from select event
-      else if (detail.geometry && detail.geometry.coordinates) {
-        feature = detail;
-      }
-    }
-    
-    if (feature && feature.geometry && feature.geometry.coordinates) {
-      const [lng, lat] = feature.geometry.coordinates;
-      
-      // Build full address from available properties
-      let placeName = '';
-      const props = feature.properties || {};
-      
-      if (props.full_address) {
-        placeName = props.full_address;
-      } else if (props.place_name) {
-        placeName = props.place_name;
-      } else {
-        // Build address from components
-        const addressParts = [];
-        if (props.address) addressParts.push(props.address);
-        if (props.name && props.name !== props.address) addressParts.push(props.name);
-        if (props.place) addressParts.push(props.place);
-        if (props.district) addressParts.push(props.district);
-        if (props.locality) addressParts.push(props.locality);
-        if (props.region) addressParts.push(props.region);
-        if (props.postcode) addressParts.push(props.postcode);
-        if (props.country) addressParts.push(props.country);
+    searchInput.addEventListener('keydown', async (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        const query = (e.target as HTMLInputElement).value.trim();
+        if (!query) return;
         
-        placeName = addressParts.length > 0 ? addressParts.join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        if (handleCoordinateSearch(query)) {
+          (e.target as HTMLInputElement).value = '';
+          return;
+        }
+        
+        await handleGeocodingSearch(query);
+        (e.target as HTMLInputElement).value = '';
       }
-      
-      console.log('Extracted place name:', placeName);
-      
-      setLastSearchLocation({ lng, lat, zoom: 16 });
-      
-      if (map.current) {
-        map.current.flyTo({ 
-          center: [lng, lat], 
-          zoom: 16,
-          speed: 2.0
-        });
-      }
-      
-      addMarkerToMap(lng, lat, placeName, 'location', undefined, undefined, undefined);
-    }
+    });
+
+    searchContainer.appendChild(searchInput);
   };
+
 
   // Clear all markers
   const clearMarkers = async () => {
@@ -446,7 +434,17 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Add marker to map and database
   const addMarkerToMap = async (lng: number, lat: number, label: string, type: string, zoneNumber?: number, deviceIcon?: string, assetIcon?: string) => {
-    if (!mapId || !map.current) return;
+    console.log('addMarkerToMap called with:', { lng, lat, label, type, mapId: mapId, mapExists: !!map.current });
+    
+    if (!mapId) {
+      console.error('No mapId available for adding marker');
+      return;
+    }
+    
+    if (!map.current) {
+      console.error('No map instance available for adding marker');
+      return;
+    }
 
     try {
       // Add to database
@@ -560,7 +558,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           {/* Search Box */}
           <div className="mb-4">
             <div 
-              ref={searchBoxRef}
+              id="search-box"
               className="w-full"
             />
           </div>

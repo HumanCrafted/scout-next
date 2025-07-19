@@ -61,6 +61,10 @@
 }
 
 /* Mapbox Search Box Styling */
+#search-box {
+  width: 100%;
+}
+
 mapbox-search-box {
   --mapbox-search-font-size: 14px;
   --mapbox-search-border-radius: 6px;
@@ -99,3 +103,4 @@ mapbox-search-box input:focus {
   border-color: hsl(222.2 84% 4.9%) !important;
   box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1) !important;
 }
+
