@@ -4,13 +4,21 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { getCurrentTeam } from '@/lib/auth';
 
 // Add Mapbox Search Box types
 declare global {
   interface Window {
-    MapboxSearchBox: any;
+    MapboxSearchBox: {
+      new(): {
+        accessToken: string;
+        placeholder: string;
+        country: string;
+        language: string;
+        proximity: { lng: number; lat: number };
+        addEventListener: (event: string, handler: (data: any) => void) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+    };
   }
 }
 
@@ -278,6 +286,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   };
 
   // Handle search results from Mapbox Search Box
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSearchResult = (data: any) => {
     console.log('Search result:', data);
     
