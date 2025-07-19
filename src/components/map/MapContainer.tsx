@@ -351,6 +351,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                   }
                 : m
             ));
+            
+            // Update edit form if this marker is being edited
+            if (editingMarker && editingMarker.id === marker.id) {
+              setEditMarkerLat(lngLat.lat.toString());
+              setEditMarkerLng(lngLat.lng.toString());
+            }
           } else {
             console.error('Failed to update marker position:', response.status);
           }
@@ -817,6 +823,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           }
         }
         
+        // Update editing marker with new coordinates
+        setEditingMarker({
+          ...editingMarker,
+          label: editMarkerName.trim(),
+          lat,
+          lng
+        });
+        
         setIsEditMarkerModalOpen(false);
         setEditingMarker(null);
       } else {
@@ -956,6 +970,26 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                   ? { ...m, lat: lngLat.lat, lng: lngLat.lng }
                   : m
               ));
+              
+              // Update maps state
+              setMaps(prev => prev.map(m => 
+                m.isActive 
+                  ? { 
+                      ...m, 
+                      markers: m.markers.map(mapMarker => 
+                        mapMarker.id === marker.id 
+                          ? { ...mapMarker, lat: lngLat.lat, lng: lngLat.lng }
+                          : mapMarker
+                      )
+                    }
+                  : m
+              ));
+              
+              // Update edit form if this marker is being edited
+              if (editingMarker && editingMarker.id === marker.id) {
+                setEditMarkerLat(lngLat.lat.toString());
+                setEditMarkerLng(lngLat.lng.toString());
+              }
             } else {
               console.error('Failed to update marker position:', response.status);
             }
@@ -1004,11 +1038,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           <div className="flex items-center justify-between mb-3 px-2">
             <h4 className="text-xs font-medium text-muted-foreground">MAPS</h4>
             <button 
-              className="h-5 w-5 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="h-4 w-4 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '14px'}}>add</span>
+              <span className="material-icons" style={{fontSize: '12px'}}>add</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -1045,14 +1079,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                         title="Delete map"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteMap(mapItem.id);
                         }}
                       >
-                        <span className="material-icons" style={{fontSize: '10px'}}>delete</span>
+                        <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
                       </Button>
                     )}
                   </div>
@@ -1453,6 +1487,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 onChange={(e) => setEditMarkerName(e.target.value)}
                 className="col-span-3"
                 placeholder="Enter marker name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveMarkerEdit();
+                  } else if (e.key === 'Escape') {
+                    setIsEditMarkerModalOpen(false);
+                  }
+                }}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -1467,6 +1508,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 placeholder="e.g., 40.7128"
                 type="number"
                 step="any"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveMarkerEdit();
+                  } else if (e.key === 'Escape') {
+                    setIsEditMarkerModalOpen(false);
+                  }
+                }}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
