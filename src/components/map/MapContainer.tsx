@@ -812,6 +812,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             : m
         ));
         
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { 
+                ...m, 
+                markers: m.markers.map(marker => 
+                  marker.id === editingMarker.id 
+                    ? { ...marker, label: editMarkerName.trim(), lat, lng }
+                    : marker
+                )
+              }
+            : m
+        ));
+        
         // Update visual marker position
         const mapboxMarker = markersRef.current[editingMarker.id];
         if (mapboxMarker) {
@@ -822,14 +836,6 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             popup.setHTML(`<div style="font-weight: 500;">${editMarkerName.trim()}</div>`);
           }
         }
-        
-        // Update editing marker with new coordinates
-        setEditingMarker({
-          ...editingMarker,
-          label: editMarkerName.trim(),
-          lat,
-          lng
-        });
         
         setIsEditMarkerModalOpen(false);
         setEditingMarker(null);
