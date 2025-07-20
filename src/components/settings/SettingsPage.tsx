@@ -22,16 +22,15 @@ interface SettingsData {
   autoSaveFrequency: number; // seconds
   
   // Team Settings
-  teamDisplayName: string;
+  teamName: string;
   exportFormat: 'json' | 'csv' | 'geojson';
-  screenshotModeDefault: boolean;
   
   // Session Settings
   sessionTimeout: number; // hours
 }
 
 interface SettingsPageProps {
-  teamName: string;
+  teamSlug: string; // URL slug like "masen"
   onBack: () => void;
 }
 
@@ -42,13 +41,12 @@ const defaultSettings: SettingsData = {
   coordinateFormat: 'decimal',
   defaultMarkerLocked: false,
   autoSaveFrequency: 2,
-  teamDisplayName: '',
+  teamName: '',
   exportFormat: 'json',
-  screenshotModeDefault: false,
   sessionTimeout: 24,
 };
 
-export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
+export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [isDirty, setIsDirty] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -58,14 +56,24 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
-    // Load settings from localStorage or API
-    const savedSettings = localStorage.getItem(`scout-settings-${teamName}`);
-    if (savedSettings) {
-      setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
-    } else {
-      setSettings({ ...defaultSettings, teamDisplayName: teamName });
+    // Load current team data and settings
+    const currentTeam = localStorage.getItem('scout-team');
+    let currentTeamName = teamSlug;
+    
+    if (currentTeam) {
+      const teamData = JSON.parse(currentTeam);
+      currentTeamName = teamData.displayName || teamSlug;
     }
-  }, [teamName]);
+    
+    // Load settings from localStorage
+    const savedSettings = localStorage.getItem(`scout-settings-${teamSlug}`);
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      setSettings({ ...defaultSettings, ...parsed, teamName: currentTeamName });
+    } else {
+      setSettings({ ...defaultSettings, teamName: currentTeamName });
+    }
+  }, [teamSlug]);
 
   const handleSettingChange = <K extends keyof SettingsData>(
     key: K,
@@ -77,19 +85,51 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
 
   const handleSaveSettings = async () => {
     try {
-      // Save to localStorage for now (could be replaced with API call)
-      localStorage.setItem(`scout-settings-${teamName}`, JSON.stringify(settings));
-      setIsDirty(false);
+      // Save to localStorage for user preferences
+      localStorage.setItem(`scout-settings-${teamSlug}`, JSON.stringify(settings));
       
-      // Could add API call here to save to database
-      // await fetch('/api/settings', { method: 'POST', body: JSON.stringify(settings) });
+      // Get current team display name for comparison
+      const currentTeam = localStorage.getItem('scout-team');
+      const currentDisplayName = currentTeam ? JSON.parse(currentTeam).displayName : teamSlug;
+      
+      // Save team name to database if it changed
+      if (settings.teamName !== currentDisplayName) {
+        const response = await fetch(`/api/teams/${teamSlug}/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            displayName: settings.teamName,
+          }),
+        });
+
+        if (response.ok) {
+          // Update local session data
+          const currentTeam = localStorage.getItem('scout-team');
+          if (currentTeam) {
+            const teamData = JSON.parse(currentTeam);
+            teamData.displayName = settings.teamName;
+            localStorage.setItem('scout-team', JSON.stringify(teamData));
+          }
+          
+          // Refresh the page to update the team name display
+          window.location.reload();
+        } else {
+          const error = await response.json();
+          console.error('Failed to update team name:', error.message);
+          // Could show error to user here
+        }
+      }
+      
+      setIsDirty(false);
     } catch (err) {
       console.error('Error saving settings:', err);
     }
   };
 
   const handleResetSettings = () => {
-    setSettings({ ...defaultSettings, teamDisplayName: teamName });
+    const currentTeam = localStorage.getItem('scout-team');
+    const currentDisplayName = currentTeam ? JSON.parse(currentTeam).displayName : teamSlug;
+    setSettings({ ...defaultSettings, teamName: currentDisplayName });
     setIsDirty(true);
   };
 
@@ -112,7 +152,7 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          teamName,
+          teamName: teamSlug,
           currentPassword,
           newPassword,
         }),
@@ -135,14 +175,14 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
   const exportData = async () => {
     try {
       // This would export all team data
-      const response = await fetch(`/api/teams/${teamName}/export?format=${settings.exportFormat}`);
+      const response = await fetch(`/api/teams/${teamSlug}/export?format=${settings.exportFormat}`);
       const data = await response.blob();
       
       const url = window.URL.createObjectURL(data);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `scout-${teamName}-export.${settings.exportFormat}`;
+      a.download = `scout-${teamSlug}-export.${settings.exportFormat}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -233,14 +273,6 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
               <Label htmlFor="labels-visible">Show labels by default</Label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="screenshot-default"
-                checked={settings.screenshotModeDefault}
-                onCheckedChange={(checked) => handleSettingChange('screenshotModeDefault', checked)}
-              />
-              <Label htmlFor="screenshot-default">Enable screenshot mode by default</Label>
-            </div>
           </CardContent>
         </Card>
 
@@ -282,12 +314,16 @@ export default function SettingsPage({ teamName, onBack }: SettingsPageProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="team-name">Team Display Name</Label>
+              <Label htmlFor="team-name">Team Name</Label>
               <Input
                 id="team-name"
-                value={settings.teamDisplayName}
-                onChange={(e) => handleSettingChange('teamDisplayName', e.target.value)}
+                value={settings.teamName}
+                onChange={(e) => handleSettingChange('teamName', e.target.value)}
+                placeholder="Enter team name"
               />
+              <p className="text-xs text-muted-foreground">
+                This is the name displayed in the application header and used in exports.
+              </p>
             </div>
 
             <div className="space-y-2">

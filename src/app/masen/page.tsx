@@ -13,6 +13,7 @@ export default function MasenTeamPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [teamDisplayName, setTeamDisplayName] = useState('');
   const router = useRouter();
 
   // Check for existing session on load
@@ -24,6 +25,7 @@ export default function MasenTeamPage() {
         const { valid } = await validateSession();
         if (valid) {
           setIsAuthenticated(true);
+          setTeamDisplayName(currentTeam.displayName);
         }
       }
       setIsLoading(false);
@@ -41,6 +43,11 @@ export default function MasenTeamPage() {
       
       if (result.success) {
         setIsAuthenticated(true);
+        // Get updated team info after login
+        const currentTeam = getCurrentTeam();
+        if (currentTeam) {
+          setTeamDisplayName(currentTeam.displayName);
+        }
       } else {
         setError(result.error || 'Invalid password');
       }
@@ -115,7 +122,7 @@ export default function MasenTeamPage() {
   return (
     <div className="h-screen">
       {/* Map Container with v1 layout structure */}
-      <MapContainer teamName="Masen Team" onLogout={handleLogout} onOpenSettings={handleOpenSettings} />
+      <MapContainer teamName={teamDisplayName || 'masen'} onLogout={handleLogout} onOpenSettings={handleOpenSettings} />
     </div>
   );
 }

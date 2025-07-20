@@ -53,7 +53,7 @@ export default function MasenSettingsPage() {
 
   return (
     <SettingsPage 
-      teamName="masen" 
+      teamSlug="masen" 
       onBack={handleBackToMap}
     />
   );
