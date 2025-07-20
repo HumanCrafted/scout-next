@@ -4,16 +4,13 @@
 Scout is a web-based industrial sensor mapping application built for mapping sensors and equipment at large industrial sites. The application provides a comprehensive interface for placing markers on maps, searching locations, managing marker data, and organizing markers into hierarchical groups.
 
 ## Technologies Used
-- **Frontend**: Next.js 15.4.2 with React 19.1.0 and TypeScript
-- **Database**: Vercel Postgres with Prisma ORM
-- **Mapping**: Mapbox GL JS v3.13.0
+- **Frontend**: Vanilla HTML, CSS, JavaScript (no frameworks)
+- **Mapping**: Mapbox GL JS v3.6.0
 - **Search**: Mapbox Search Box API
-- **UI Components**: shadcn/ui with Radix UI primitives
-- **Styling**: Tailwind CSS with CSS animations
 - **Icons**: Material Design Icons
-- **Forms**: React Hook Form with Zod validation
-- **Authentication**: bcrypt.js for password hashing
-- **Development**: ESLint, PostCSS, TypeScript compiler
+- **Styling**: shadcn/ui design system colors and theming
+- **Development**: Docker containerized environment with http-server
+- **Node.js**: v18-alpine for development server
 
 ## Key Features
 
@@ -79,39 +76,13 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 
 ## File Structure
 ```
-scout-next/
-├── src/
-│   ├── app/
-│   │   ├── api/                    # API routes for backend functionality
-│   │   │   ├── auth/               # Authentication endpoints
-│   │   │   ├── maps/               # Map CRUD operations
-│   │   │   ├── markers/            # Marker CRUD operations
-│   │   │   └── teams/              # Team management
-│   │   ├── [team]/                 # Dynamic team routes (e.g., /masen)
-│   │   ├── page.tsx                # Landing page
-│   │   ├── layout.tsx              # Root layout
-│   │   └── globals.css             # Global styles
-│   ├── components/
-│   │   ├── map/
-│   │   │   └── MapContainer.tsx    # Main map component
-│   │   └── ui/                     # shadcn/ui components
-│   │       ├── button.tsx
-│   │       ├── dialog.tsx
-│   │       ├── input.tsx
-│   │       └── label.tsx
-│   └── lib/
-│       ├── auth.ts                 # Authentication utilities
-│       ├── db.ts                   # Database connection
-│       └── utils.ts                # Shared utilities
-├── prisma/
-│   ├── schema.prisma               # Database schema
-│   ├── migrations/                 # Database migrations
-│   └── seed.ts                     # Database seeding
-├── package.json                    # Dependencies and scripts
-├── tailwind.config.js              # Tailwind CSS configuration
-├── tsconfig.json                   # TypeScript configuration
-├── next.config.ts                  # Next.js configuration
-└── CLAUDE.md                       # Project documentation (this file)
+scout/
+├── index.html          # Main HTML structure and CSS styling
+├── app.js              # Core application logic and Mapbox integration
+├── package.json        # Node.js dependencies and scripts
+├── Dockerfile          # Docker container configuration
+├── docker-compose.yml  # Docker development setup
+└── CLAUDE.md          # Project documentation (this file)
 ```
 
 ## Development History
@@ -173,45 +144,20 @@ scout-next/
 - **Environment-based token management**: Automatic detection for GitHub Pages deployment
 - **Enhanced keyboard support**: ESC and Ctrl+Enter shortcuts for modal dialogs
 
-### Phase 10: Next.js Migration (v2.0) - COMPLETED ✅
-- **Framework Migration**: Successfully migrated from vanilla JS to Next.js 15.4.2
-- **Database Integration**: Implemented Vercel Postgres with Prisma ORM
-- **Team Authentication**: Per-team login system with secure password hashing
-- **Modern UI**: Complete shadcn/ui component integration with Tailwind CSS
-- **Slot Labels**: Implemented beautiful slot-shaped labels with concentric marker positioning
-- **Advanced Scrolling**: Fixed header/search/footer with scrollable maps section only
-- **Screenshot Mode**: Professional fullscreen export functionality
-- **Lock System**: Database-persisted marker lock states
-- **API Architecture**: RESTful endpoints for all CRUD operations
-- **TypeScript**: Full type safety with interfaces and validation
-
-## Current State (Next.js Migration Complete!)
-The application has been successfully migrated to Next.js with significant enhancements:
-
-### ✅ Next.js Architecture (v2.0)
-- **Framework**: Next.js 15.4.2 with React 19.1.0 and TypeScript
-- **Database**: Vercel Postgres with Prisma ORM for data persistence
-- **UI Components**: shadcn/ui with Radix UI primitives and Tailwind CSS
-- **Authentication**: Team-based login system with bcrypt password hashing
-- **Modern Tooling**: ESLint, PostCSS, and comprehensive TypeScript support
-
-### ✅ Enhanced Features
-- **Slot-shaped labels**: Beautiful new label design with markers appearing inside slots
-- **Advanced sidebar scrolling**: Fixed header/search/footer with scrollable maps section
-- **Marker lock/unlock system**: Database-persisted lock states to prevent accidental movement
-- **Screenshot mode**: Clean fullscreen map export with all UI elements hidden
-- **Professional transitions**: Smooth 300ms animations throughout the interface
-- **Team workspaces**: URL-based team access (`/masen`, `/move`, etc.)
-- **Real-time persistence**: All changes automatically saved to Vercel Postgres
-- **Responsive design**: Mobile-optimized interface with touch support
-
-### ✅ Technical Infrastructure
-- **API Routes**: RESTful endpoints for maps, markers, teams, and authentication
-- **Database Schema**: Properly normalized tables with relationships and indexes
-- **Component Architecture**: Modular React components with TypeScript interfaces
-- **Form Handling**: React Hook Form with Zod validation
-- **State Management**: React hooks with optimistic updates
-- **Build Pipeline**: Automated Prisma generation and Next.js optimization
+## Current State
+The application is fully functional as a comprehensive mapping tool with:
+- ✅ Complete marker placement and management system
+- ✅ Hierarchical marker grouping and organization
+- ✅ Professional edit dialogs with GPS coordinate editing
+- ✅ Marker lock/unlock system for position control
+- ✅ File-based save/load with drag-and-drop support
+- ✅ Full search and navigation capabilities
+- ✅ Professional UI with Material Design elements
+- ✅ Screenshot mode for clean exports
+- ✅ Multiple marker types with custom icons (including solar panel SVG)
+- ✅ Environment-based token management for GitHub Pages
+- ✅ Docker development environment
+- ✅ Comprehensive keyboard shortcuts and accessibility features
 
 ## Key Design Decisions
 
@@ -236,40 +182,23 @@ The application has been successfully migrated to Next.js with significant enhan
 
 ## Development Commands
 ```bash
+# Start development server
+docker-compose up
+
 # Install dependencies
 npm install
 
-# Generate Prisma client and start development server
+# Run development server (inside container)
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm run start
-
-# Generate Prisma client only
-npx prisma generate
-
-# Run database migrations
-npx prisma migrate dev
-
-# Seed database with initial data
-npm run db:seed
-
-# Lint code
-npm run lint
 ```
 
 ## Notes for Future Development
-- **Next.js Architecture**: Modern React-based framework provides excellent developer experience
-- **Database Integration**: Vercel Postgres with Prisma ORM enables robust data persistence
-- **Team System**: URL-based team workspaces provide excellent multi-tenancy
-- **Component Architecture**: shadcn/ui provides consistent, accessible UI components
-- **TypeScript**: Full type safety improves code reliability and developer experience
-- **Vercel Deployment**: Serverless architecture scales automatically
-- **Mapbox Integration**: Solid foundation supports additional mapping features
-- **Slot Labels**: Beautiful new label design enhances visual hierarchy
+- The application successfully implements complex features with vanilla JavaScript
+- File-based save/load system works well for data persistence without backend
+- Hierarchical marker grouping demonstrates advanced UI interactions
+- Current Docker setup works well for development consistency
+- Mapbox integration is solid and can support additional features
+- Icon system is flexible and can accommodate new marker types easily
 
 ## Next.js Migration Plan (Advanced Scout App v2)
 
@@ -677,7 +606,7 @@ src/app/api/
 - [ ] Documentation and deployment
 
 ---
-*Last updated: 2025-07-20*
+*Last updated: 2025-01-18*
 *Built with Claude Code assistance*
-*Next.js migration completed successfully!*
-*Currently deployed with Vercel and database integration*
+*Ready for GitHub Pages deployment*
+*Next.js migration plan added*

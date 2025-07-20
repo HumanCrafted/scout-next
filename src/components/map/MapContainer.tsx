@@ -20,6 +20,8 @@ interface Marker {
   deviceIcon?: string;
   assetIcon?: string;
   locked?: boolean;
+  parentId?: string | null;
+  children?: Marker[];
 }
 
 interface MapContainerProps {
@@ -60,6 +62,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     deviceIcon?: string;
     assetIcon?: string;
   } | null>(null);
+  
+  // Marker grouping state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [draggedMarkerId, setDraggedMarkerId] = useState<string | null>(null);
+  const [dragOverMarkerId, setDragOverMarkerId] = useState<string | null>(null);
 
   // Get current team - memoize to prevent unnecessary re-renders
   const currentTeam = useMemo(() => getCurrentTeam(), []);
@@ -714,18 +721,66 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   // Delete individual marker
   const deleteMarker = async (markerId: string) => {
     try {
+      // Check if this marker has children
+      const markerToDelete = markers.find(m => m.id === markerId);
+      const children = getChildMarkers(markers, markerId);
+      
+      if (children.length > 0) {
+        const confirmDelete = confirm(
+          `This marker has ${children.length} child marker(s).\n\n` +
+          'Deleting the parent will make all child markers independent.\n\n' +
+          'Do you want to continue?'
+        );
+        
+        if (!confirmDelete) return;
+      }
+
       const response = await fetch(`/api/markers/${markerId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
+        // If this was a parent marker, make all children independent
+        if (children.length > 0) {
+          for (const child of children) {
+            try {
+              await fetch(`/api/markers/${child.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  parentId: null,
+                }),
+              });
+            } catch (error) {
+              console.error('Error making child marker independent:', error);
+            }
+          }
+        }
+
         // Remove from state
-        setMarkers(prev => prev.filter(m => m.id !== markerId));
+        setMarkers(prev => {
+          return prev
+            .filter(m => m.id !== markerId)
+            .map(m => 
+              // Make children independent
+              m.parentId === markerId ? { ...m, parentId: null } : m
+            );
+        });
         
         // Update maps state
         setMaps(prev => prev.map(m => 
           m.isActive 
-            ? { ...m, markers: m.markers.filter(marker => marker.id !== markerId) }
+            ? { 
+                ...m, 
+                markers: m.markers
+                  .filter(marker => marker.id !== markerId)
+                  .map(marker => 
+                    // Make children independent
+                    marker.parentId === markerId ? { ...marker, parentId: null } : marker
+                  )
+              }
             : m
         ));
         
@@ -1116,6 +1171,142 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   }, []);
 
+  // Helper functions for marker grouping
+  const getParentMarkers = (markers: Marker[]) => {
+    return markers.filter(marker => !marker.parentId);
+  };
+
+  const getChildMarkers = (markers: Marker[], parentId: string) => {
+    return markers.filter(marker => marker.parentId === parentId);
+  };
+
+  const toggleGroupCollapse = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle marker drag and drop for grouping
+  const handleMarkerDragStart = (e: React.DragEvent, markerId: string) => {
+    setDraggedMarkerId(markerId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleMarkerDragOver = (e: React.DragEvent, targetMarkerId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverMarkerId(targetMarkerId);
+  };
+
+  const handleMarkerDragLeave = () => {
+    setDragOverMarkerId(null);
+  };
+
+  const handleMarkerDrop = async (e: React.DragEvent, targetMarkerId: string) => {
+    e.preventDefault();
+    setDragOverMarkerId(null);
+    
+    if (!draggedMarkerId || draggedMarkerId === targetMarkerId) {
+      setDraggedMarkerId(null);
+      return;
+    }
+
+    try {
+      // Update marker to have new parent
+      const response = await fetch(`/api/markers/${draggedMarkerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parentId: targetMarkerId,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMarkers(prev => prev.map(m => 
+          m.id === draggedMarkerId 
+            ? { ...m, parentId: targetMarkerId }
+            : m
+        ));
+        
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { 
+                ...m, 
+                markers: m.markers.map(marker => 
+                  marker.id === draggedMarkerId 
+                    ? { ...marker, parentId: targetMarkerId }
+                    : marker
+                )
+              }
+            : m
+        ));
+      } else {
+        console.error('Failed to update marker parent:', response.status);
+      }
+    } catch (error) {
+      console.error('Error updating marker parent:', error);
+    }
+
+    setDraggedMarkerId(null);
+  };
+
+  const handleMarkerDragEnd = () => {
+    setDraggedMarkerId(null);
+    setDragOverMarkerId(null);
+  };
+
+  // Handle ungrouping by dragging away
+  const handleUngroupMarker = async (markerId: string) => {
+    try {
+      const response = await fetch(`/api/markers/${markerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parentId: null,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMarkers(prev => prev.map(m => 
+          m.id === markerId 
+            ? { ...m, parentId: null }
+            : m
+        ));
+        
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { 
+                ...m, 
+                markers: m.markers.map(marker => 
+                  marker.id === markerId 
+                    ? { ...marker, parentId: null }
+                    : marker
+                )
+              }
+            : m
+        ));
+      } else {
+        console.error('Failed to ungroup marker:', response.status);
+      }
+    } catch (error) {
+      console.error('Error ungrouping marker:', error);
+    }
+  };
+
   return (
     <div className="relative h-screen">
       {/* Left Sidebar */}
@@ -1143,7 +1334,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '16px'}}>add_circle_outline</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>add_circle</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -1199,55 +1390,158 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                     {mapItem.markers.length === 0 ? (
                       <div className="text-xs text-muted-foreground py-2 pl-4">No markers placed</div>
                     ) : (
-                      mapItem.markers.map((marker) => (
-                        <div key={marker.id} className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors">
-                          <div className="flex items-center flex-1 min-w-0">
-                            <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
-                              {marker.type === 'search' ? 'place' : 
-                               marker.type === 'location' ? 'location_on' :
-                               marker.type === 'device' ? 'memory' : 'build'}
-                            </span>
-                            <span 
-                              className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                              title="Click to center on marker"
-                              onClick={() => centerOnMarker(marker)}
+                      getParentMarkers(mapItem.markers).map((marker) => {
+                        const children = getChildMarkers(mapItem.markers, marker.id);
+                        const isCollapsed = collapsedGroups.has(marker.id);
+                        const hasChildren = children.length > 0;
+                        
+                        return (
+                          <div key={marker.id}>
+                            {/* Parent Marker */}
+                            <div 
+                              className={`group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors ${
+                                dragOverMarkerId === marker.id ? 'bg-primary/10 border-l-2 border-primary' : ''
+                              }`}
+                              draggable={!marker.locked}
+                              onDragStart={(e) => handleMarkerDragStart(e, marker.id)}
+                              onDragOver={(e) => handleMarkerDragOver(e, marker.id)}
+                              onDragLeave={handleMarkerDragLeave}
+                              onDrop={(e) => handleMarkerDrop(e, marker.id)}
+                              onDragEnd={handleMarkerDragEnd}
                             >
-                              {marker.label}
-                            </span>
+                              <div className="flex items-center flex-1 min-w-0">
+                                {hasChildren && (
+                                  <button 
+                                    className="mr-1 p-0.5 hover:bg-muted-foreground/10 rounded"
+                                    onClick={() => toggleGroupCollapse(marker.id)}
+                                    title={isCollapsed ? "Expand group" : "Collapse group"}
+                                  >
+                                    <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
+                                      {isCollapsed ? 'chevron_right' : 'expand_more'}
+                                    </span>
+                                  </button>
+                                )}
+                                <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                                  {marker.type === 'search' ? 'place' : 
+                                   marker.type === 'location' ? 'location_on' :
+                                   marker.type === 'device' ? 'memory' : 'build'}
+                                </span>
+                                <span 
+                                  className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                                  title="Click to center on marker"
+                                  onClick={() => centerOnMarker(marker)}
+                                >
+                                  {marker.label}
+                                </span>
+                                {hasChildren && (
+                                  <span className="ml-1 text-xs text-muted-foreground">({children.length})</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  title={marker.locked ? 'Unlock marker' : 'Lock marker'}
+                                  onClick={() => toggleMarkerLock(marker.id)}
+                                >
+                                  <span className="material-icons" style={{fontSize: '12px'}}>
+                                    {marker.locked ? 'lock' : 'lock_open'}
+                                  </span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  title="Edit marker"
+                                  onClick={() => editMarker(marker)}
+                                >
+                                  <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  title="Delete marker"
+                                  onClick={() => deleteMarker(marker.id)}
+                                >
+                                  <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Child Markers */}
+                            {hasChildren && !isCollapsed && (
+                              <div className="ml-6 border-l-2 border-border space-y-0.5 pl-2">
+                                {children.map((childMarker) => (
+                                  <div 
+                                    key={childMarker.id} 
+                                    className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors"
+                                    draggable={!childMarker.locked}
+                                    onDragStart={(e) => handleMarkerDragStart(e, childMarker.id)}
+                                    onDragEnd={handleMarkerDragEnd}
+                                  >
+                                    <div className="flex items-center flex-1 min-w-0">
+                                      <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                                        {childMarker.type === 'search' ? 'place' : 
+                                         childMarker.type === 'location' ? 'location_on' :
+                                         childMarker.type === 'device' ? 'memory' : 'build'}
+                                      </span>
+                                      <span 
+                                        className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                                        title="Click to center on marker"
+                                        onClick={() => centerOnMarker(childMarker)}
+                                      >
+                                        {childMarker.label}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        title="Ungroup marker"
+                                        onClick={() => handleUngroupMarker(childMarker.id)}
+                                      >
+                                        <span className="material-icons" style={{fontSize: '12px'}}>call_split</span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        title={childMarker.locked ? 'Unlock marker' : 'Lock marker'}
+                                        onClick={() => toggleMarkerLock(childMarker.id)}
+                                      >
+                                        <span className="material-icons" style={{fontSize: '12px'}}>
+                                          {childMarker.locked ? 'lock' : 'lock_open'}
+                                        </span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        title="Edit marker"
+                                        onClick={() => editMarker(childMarker)}
+                                      >
+                                        <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                        title="Delete marker"
+                                        onClick={() => deleteMarker(childMarker.id)}
+                                      >
+                                        <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              title={marker.locked ? 'Unlock marker' : 'Lock marker'}
-                              onClick={() => toggleMarkerLock(marker.id)}
-                            >
-                              <span className="material-icons" style={{fontSize: '12px'}}>
-                                {marker.locked ? 'lock' : 'lock_open'}
-                              </span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              title="Edit marker"
-                              onClick={() => editMarker(marker)}
-                            >
-                              <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              title="Delete marker"
-                              onClick={() => deleteMarker(marker.id)}
-                            >
-                              <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
-                            </Button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 )}

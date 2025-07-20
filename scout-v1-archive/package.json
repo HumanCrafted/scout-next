@@ -1,0 +1,17 @@
+{
+  "name": "masen-maps",
+  "version": "1.0.0",
+  "description": "Simple map interface with Mapbox",
+  "main": "index.js",
+  "scripts": {
+    "dev": "http-server -p 3000 -c-1",
+    "start": "npm run dev"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "devDependencies": {},
+  "keywords": ["mapbox", "maps", "geolocation"],
+  "author": "",
+  "license": "MIT"
+}

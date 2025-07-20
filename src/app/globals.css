@@ -150,3 +150,15 @@ body.screenshot-mode .map-container {
   right: 0 !important;
 }
 
+/* Marker Grouping Styles */
+.marker-drag-over {
+  background: hsl(var(--primary) / 0.1) !important;
+  border-left: 2px solid hsl(var(--primary)) !important;
+}
+
+.marker-child {
+  border-left: 2px solid hsl(var(--border));
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+}
+
