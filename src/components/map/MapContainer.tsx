@@ -301,16 +301,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
       }
       
-      // Create popup with slot styling - pill shape with left end concentric with marker
+      // Create popup with slot styling - marker sits inside left rounded end
       const popup = new mapboxgl.Popup({ 
-        offset: [3, 0], // Adjusted so left end of slot aligns with marker center
+        offset: [-20, 0], // Position so marker center is concentric with slot's left rounded end
         anchor: 'left',
         closeButton: false,
         closeOnClick: false
       }).setHTML(`<div style="
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 8px 16px 8px 24px;
+        padding: 8px 16px 8px 28px;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
@@ -319,7 +319,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         height: 40px;
         display: flex;
         align-items: center;
-        min-width: 60px;
+        min-width: 80px;
       ">${marker.label}</div>`);
       
       // Add marker to map with popup
@@ -854,7 +854,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
               color: white;
-              padding: 8px 16px 8px 24px;
+              padding: 8px 16px 8px 28px;
               border-radius: 20px;
               height: 40px;
               display: flex;
@@ -971,16 +971,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
         
-        // Create popup with slot styling - pill shape with left end concentric with marker
+        // Create popup with slot styling - marker sits inside left rounded end
         const popup = new mapboxgl.Popup({ 
-          offset: [3, 0], // Adjusted so left end of slot aligns with marker center
+          offset: [-20, 0], // Position so marker center is concentric with slot's left rounded end
           anchor: 'left',
           closeButton: false,
           closeOnClick: false
         }).setHTML(`<div style="
           background: rgba(0, 0, 0, 0.8);
           color: white;
-          padding: 8px 16px 8px 24px;
+          padding: 8px 16px 8px 28px;
           border-radius: 20px;
           font-size: 12px;
           font-weight: 500;
@@ -989,7 +989,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           height: 40px;
           display: flex;
           align-items: center;
-          min-width: 60px;
+          min-width: 80px;
         ">${label}</div>`);
         
         // Add marker to map with popup
