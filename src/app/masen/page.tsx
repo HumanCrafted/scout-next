@@ -57,6 +57,10 @@ export default function MasenTeamPage() {
     router.push('/');
   };
 
+  const handleOpenSettings = () => {
+    router.push('/masen/settings');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -111,7 +115,7 @@ export default function MasenTeamPage() {
   return (
     <div className="h-screen">
       {/* Map Container with v1 layout structure */}
-      <MapContainer teamName="Masen Team" onLogout={handleLogout} />
+      <MapContainer teamName="Masen Team" onLogout={handleLogout} onOpenSettings={handleOpenSettings} />
     </div>
   );
 }

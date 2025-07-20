@@ -29,9 +29,10 @@ interface Marker {
 interface MapContainerProps {
   teamName: string;
   onLogout: () => void;
+  onOpenSettings?: () => void;
 }
 
-export default function MapContainer({ teamName, onLogout }: MapContainerProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
+export default function MapContainer({ teamName, onLogout, onOpenSettings }: MapContainerProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -1826,6 +1827,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
             style={{fontSize: '0.75rem', fontWeight: '500'}}
             title="Settings"
+            onClick={onOpenSettings}
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>settings</span>
             Settings
