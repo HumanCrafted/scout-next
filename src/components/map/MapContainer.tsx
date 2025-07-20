@@ -1329,7 +1329,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         className={`absolute top-0 bottom-0 h-full transition-all duration-300 ${
           screenshotMode 
             ? 'left-0 right-0 w-full' 
-            : 'left-[280px] right-0 w-[calc(100%-280px)]'
+            : 'left-[280px] right-0'
         }`}
         style={{ minHeight: '100vh' }}
         onDragOver={(e) => {
