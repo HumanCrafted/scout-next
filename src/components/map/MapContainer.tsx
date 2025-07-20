@@ -310,13 +310,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       }).setHTML(`<div style="
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 8px 16px 8px 28px;
-        border-radius: 20px;
+        padding: 6px 16px 6px 35px;
+        border-radius: 17px;
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        height: 40px;
+        height: 34px;
         display: flex;
         align-items: center;
         min-width: 80px;
@@ -854,12 +854,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
               color: white;
-              padding: 8px 16px 8px 28px;
-              border-radius: 20px;
-              height: 40px;
+              padding: 6px 16px 6px 35px;
+              border-radius: 17px;
+              height: 34px;
               display: flex;
               align-items: center;
-              min-width: 60px;
+              min-width: 80px;
               font-size: 12px;
               font-weight: 500;
               white-space: nowrap;
@@ -980,13 +980,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         }).setHTML(`<div style="
           background: rgba(0, 0, 0, 0.8);
           color: white;
-          padding: 8px 16px 8px 28px;
-          border-radius: 20px;
+          padding: 6px 16px 6px 35px;
+          border-radius: 17px;
           font-size: 12px;
           font-weight: 500;
           white-space: nowrap;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          height: 40px;
+          height: 34px;
           display: flex;
           align-items: center;
           min-width: 80px;
