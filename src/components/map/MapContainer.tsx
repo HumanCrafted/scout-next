@@ -1140,11 +1140,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           <div className="flex items-center justify-between mb-3 px-2">
             <h4 className="text-xs font-medium text-muted-foreground">MAPS</h4>
             <button 
-              className="h-4 w-4 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="text-primary hover:text-primary/80 transition-colors"
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '12px'}}>add</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>add_circle</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -1608,7 +1608,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {screenshotMode && (
         <button 
           className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transition-colors"
-          onClick={() => setScreenshotMode(false)}
+          onClick={() => {
+            setScreenshotMode(false);
+            // Force map resize when exiting screenshot mode
+            setTimeout(() => {
+              if (map.current) {
+                map.current.resize();
+              }
+            }, 50);
+          }}
         >
           Exit Screenshot Mode
         </button>
