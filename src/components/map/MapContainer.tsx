@@ -1202,13 +1202,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Handle marker drag and drop for both reordering and grouping
   const handleMarkerDragStart = (e: React.DragEvent, markerId: string) => {
-    // Prevent dragging markers that have children (groups)
-    const hasChildren = getChildMarkers(markers, markerId).length > 0;
-    if (hasChildren) {
-      e.preventDefault();
-      return;
-    }
-    
+    // Allow dragging both individual markers and groups
     setDraggedMarkerId(markerId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -1227,6 +1221,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     // Check if markers are in same parent context (for reordering)
     const sameParent = draggedMarker.parentId === targetMarker.parentId;
     
+    // Check if dragged marker is a group (has children)
+    const draggedIsGroup = getChildMarkers(markers, draggedMarkerId).length > 0;
+    
     // Get mouse position relative to the target element
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseY = e.clientY;
@@ -1239,7 +1236,20 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     const nearBottomEdge = rect.bottom - mouseY < heightThreshold;
     const isReorderPosition = nearTopEdge || nearBottomEdge;
     
-    if (sameParent && isReorderPosition) {
+    if (draggedIsGroup) {
+      // Groups can only be reordered, not grouped with other markers
+      if (sameParent && isReorderPosition) {
+        const position = mouseY < elementMiddle ? 'before' : 'after';
+        setDragInsertPosition({ markerId: targetMarkerId, position });
+        setDragOperation('reorder');
+        setDragOverMarkerId(null);
+      } else {
+        // No operation allowed for groups except reordering
+        setDragOverMarkerId(null);
+        setDragOperation(null);
+        setDragInsertPosition(null);
+      }
+    } else if (sameParent && isReorderPosition) {
       // This is a reorder operation - show insertion line
       const position = mouseY < elementMiddle ? 'before' : 'after';
       setDragInsertPosition({ markerId: targetMarkerId, position });
@@ -1293,8 +1303,10 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       await reorderMarkers(draggedMarkerId, targetMarkerId, insertAfter);
     } else if (dragOperation === 'group') {
       // Handle grouping - only allow grouping onto root/parent markers
-      if (targetMarker.parentId !== null) {
-        // Cannot group onto child markers
+      const draggedIsGroup = getChildMarkers(markers, draggedMarkerId).length > 0;
+      
+      if (targetMarker.parentId !== null || draggedIsGroup) {
+        // Cannot group onto child markers, and groups cannot be grouped
         setDraggedMarkerId(null);
         setDragOverMarkerId(null);
         setDragInsertPosition(null);
@@ -1598,8 +1610,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                             <div 
                               className={`group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors ${
                                 dragOverMarkerId === marker.id && dragOperation === 'group' ? 'bg-primary/10 border-l-2 border-primary' : ''
-                              } ${hasChildren ? 'cursor-default' : 'cursor-grab'}`}
-                              draggable={!marker.locked && !hasChildren}
+                              } cursor-grab`}
+                              draggable={!marker.locked}
                               onDragStart={(e) => handleMarkerDragStart(e, marker.id)}
                               onDragOver={(e) => handleMarkerDragOver(e, marker.id)}
                               onDragLeave={handleMarkerDragLeave}
