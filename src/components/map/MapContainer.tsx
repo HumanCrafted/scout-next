@@ -1224,15 +1224,22 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     
     if (!draggedMarker || !targetMarker) return;
     
+    // Check if markers are in same parent context (for reordering)
+    const sameParent = draggedMarker.parentId === targetMarker.parentId;
+    
     // Get mouse position relative to the target element
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseY = e.clientY;
     const elementMiddle = rect.top + rect.height / 2;
     
-    // Check if markers are in same parent context (for reordering)
-    const sameParent = draggedMarker.parentId === targetMarker.parentId;
+    // Determine if this should be a reorder or group operation
+    // Only treat as reorder if in same parent AND mouse is close to edges (within 25% of height)
+    const heightThreshold = rect.height * 0.25;
+    const nearTopEdge = mouseY - rect.top < heightThreshold;
+    const nearBottomEdge = rect.bottom - mouseY < heightThreshold;
+    const isReorderPosition = nearTopEdge || nearBottomEdge;
     
-    if (sameParent) {
+    if (sameParent && isReorderPosition) {
       // This is a reorder operation - show insertion line
       const position = mouseY < elementMiddle ? 'before' : 'after';
       setDragInsertPosition({ markerId: targetMarkerId, position });
