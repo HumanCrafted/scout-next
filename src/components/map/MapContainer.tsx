@@ -21,6 +21,8 @@ interface Marker {
   assetIcon?: string;
   locked?: boolean;
   parentId?: string | null;
+  position?: number | null;
+  childPosition?: number | null;
   children?: Marker[];
 }
 
@@ -1173,11 +1175,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Helper functions for marker grouping
   const getParentMarkers = (markers: Marker[]) => {
-    return markers.filter(marker => !marker.parentId);
+    return markers
+      .filter(marker => !marker.parentId)
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
   };
 
   const getChildMarkers = (markers: Marker[], parentId: string) => {
-    return markers.filter(marker => marker.parentId === parentId);
+    return markers
+      .filter(marker => marker.parentId === parentId)
+      .sort((a, b) => (a.childPosition || 0) - (b.childPosition || 0));
   };
 
   const toggleGroupCollapse = (groupId: string) => {
@@ -1224,7 +1230,27 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       return;
     }
 
+    const draggedMarker = markers.find(m => m.id === draggedMarkerId);
+    const targetMarker = markers.find(m => m.id === targetMarkerId);
+    
+    if (!draggedMarker || !targetMarker) {
+      setDraggedMarkerId(null);
+      return;
+    }
+
+    // Check if this is a reordering operation (same parent context)
+    if (draggedMarker.parentId === targetMarker.parentId) {
+      // This is a reorder operation
+      await reorderMarkers(draggedMarkerId, targetMarkerId);
+      setDraggedMarkerId(null);
+      return;
+    }
+
     try {
+      // Calculate position for grouping operation
+      const existingChildren = getChildMarkers(markers, targetMarkerId);
+      const nextChildPosition = existingChildren.length;
+
       // Update marker to have new parent
       const response = await fetch(`/api/markers/${draggedMarkerId}`, {
         method: 'PUT',
@@ -1233,6 +1259,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         },
         body: JSON.stringify({
           parentId: targetMarkerId,
+          childPosition: nextChildPosition,
+          position: null, // Clear root position since it's now a child
         }),
       });
 
@@ -1240,7 +1268,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         // Update local state
         setMarkers(prev => prev.map(m => 
           m.id === draggedMarkerId 
-            ? { ...m, parentId: targetMarkerId }
+            ? { ...m, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
             : m
         ));
         
@@ -1251,7 +1279,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 ...m, 
                 markers: m.markers.map(marker => 
                   marker.id === draggedMarkerId 
-                    ? { ...marker, parentId: targetMarkerId }
+                    ? { ...marker, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
                     : marker
                 )
               }
@@ -1275,6 +1303,10 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   // Handle ungrouping by dragging away
   const handleUngroupMarker = async (markerId: string) => {
     try {
+      // Get next position for ungrouped marker (becomes root marker)
+      const parentMarkers = getParentMarkers(markers);
+      const nextPosition = parentMarkers.length;
+
       const response = await fetch(`/api/markers/${markerId}`, {
         method: 'PUT',
         headers: {
@@ -1282,6 +1314,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         },
         body: JSON.stringify({
           parentId: null,
+          position: nextPosition,
+          childPosition: null,
         }),
       });
 
@@ -1289,7 +1323,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         // Update local state
         setMarkers(prev => prev.map(m => 
           m.id === markerId 
-            ? { ...m, parentId: null }
+            ? { ...m, parentId: null, position: nextPosition, childPosition: null }
             : m
         ));
         
@@ -1300,7 +1334,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 ...m, 
                 markers: m.markers.map(marker => 
                   marker.id === markerId 
-                    ? { ...marker, parentId: null }
+                    ? { ...marker, parentId: null, position: nextPosition, childPosition: null }
                     : marker
                 )
               }
@@ -1311,6 +1345,94 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       }
     } catch (error) {
       console.error('Error ungrouping marker:', error);
+    }
+  };
+
+  // Reorder markers within the same level
+  const reorderMarkers = async (draggedId: string, targetId: string, insertAfter: boolean = false) => {
+    const draggedMarker = markers.find(m => m.id === draggedId);
+    const targetMarker = markers.find(m => m.id === targetId);
+    
+    if (!draggedMarker || !targetMarker) return;
+
+    // Check if they're in the same context (both root or both children of same parent)
+    const sameParent = draggedMarker.parentId === targetMarker.parentId;
+    if (!sameParent) return;
+
+    try {
+      const isChildLevel = !!draggedMarker.parentId;
+      const contextMarkers = isChildLevel 
+        ? getChildMarkers(markers, draggedMarker.parentId!)
+        : getParentMarkers(markers);
+
+      // Calculate new positions
+      const updates: Array<{id: string, position?: number, childPosition?: number}> = [];
+      
+      // Remove dragged marker from current position
+      const filteredMarkers = contextMarkers.filter(m => m.id !== draggedId);
+      
+      // Find target position
+      const targetIndex = filteredMarkers.findIndex(m => m.id === targetId);
+      const insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
+      
+      // Insert dragged marker at new position
+      filteredMarkers.splice(insertIndex, 0, draggedMarker);
+      
+      // Reassign positions
+      filteredMarkers.forEach((marker, index) => {
+        if (isChildLevel) {
+          updates.push({ id: marker.id, childPosition: index });
+        } else {
+          updates.push({ id: marker.id, position: index });
+        }
+      });
+
+      // Update all affected markers
+      for (const update of updates) {
+        await fetch(`/api/markers/${update.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(update),
+        });
+      }
+
+      // Update local state
+      setMarkers(prev => prev.map(m => {
+        const update = updates.find(u => u.id === m.id);
+        if (update) {
+          return {
+            ...m,
+            ...(update.position !== undefined && { position: update.position }),
+            ...(update.childPosition !== undefined && { childPosition: update.childPosition })
+          };
+        }
+        return m;
+      }));
+
+      // Update maps state
+      setMaps(prev => prev.map(m => 
+        m.isActive 
+          ? { 
+              ...m, 
+              markers: m.markers.map(marker => {
+                const update = updates.find(u => u.id === marker.id);
+                if (update) {
+                  return {
+                    ...marker,
+                    ...(update.position !== undefined && { position: update.position }),
+                    ...(update.childPosition !== undefined && { childPosition: update.childPosition })
+                  };
+                }
+                return marker;
+              })
+            }
+          : m
+      ));
+
+    } catch (error) {
+      console.error('Error reordering markers:', error);
     }
   };
 

@@ -62,19 +62,21 @@ model Map {
 
 // Markers table
 model Marker {
-  id          String   @id @default(cuid())
-  mapId       String
-  label       String
-  lat         Float
-  lng         Float
-  type        String
-  zoneNumber  Int?
-  deviceIcon  String?
-  assetIcon   String?
-  locked      Boolean  @default(false)
-  parentId    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  mapId         String
+  label         String
+  lat           Float
+  lng           Float
+  type          String
+  zoneNumber    Int?
+  deviceIcon    String?
+  assetIcon     String?
+  locked        Boolean  @default(false)
+  parentId      String?
+  position      Int?     // Overall position in the map (for root markers)
+  childPosition Int?     // Position within parent group (for child markers)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   map         Map      @relation(fields: [mapId], references: [id], onDelete: Cascade)

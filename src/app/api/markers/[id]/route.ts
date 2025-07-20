@@ -17,7 +17,9 @@ export async function PUT(
       deviceIcon, 
       assetIcon, 
       locked, 
-      parentId 
+      parentId,
+      position,
+      childPosition
     } = await request.json();
 
     // Verify marker exists
@@ -44,7 +46,9 @@ export async function PUT(
         ...(deviceIcon !== undefined && { deviceIcon }),
         ...(assetIcon !== undefined && { assetIcon }),
         ...(locked !== undefined && { locked }),
-        ...(parentId !== undefined && { parentId })
+        ...(parentId !== undefined && { parentId }),
+        ...(position !== undefined && { position }),
+        ...(childPosition !== undefined && { childPosition })
       }
     });
 

@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
         maps: {
           include: {
             markers: {
-              orderBy: { createdAt: 'asc' }
+              orderBy: [
+                { position: 'asc' },
+                { childPosition: 'asc' },
+                { createdAt: 'asc' }
+              ]
             }
           },
           orderBy: { createdAt: 'asc' }

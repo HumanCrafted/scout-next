@@ -64,6 +64,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculate position for new marker
+    let position = null;
+    let childPosition = null;
+    
+    if (parentId) {
+      // This is a child marker - get next childPosition within the parent
+      const maxChildPosition = await prisma.marker.findFirst({
+        where: { parentId },
+        orderBy: { childPosition: 'desc' },
+        select: { childPosition: true }
+      });
+      childPosition = (maxChildPosition?.childPosition || -1) + 1;
+    } else {
+      // This is a root marker - get next position
+      const maxPosition = await prisma.marker.findFirst({
+        where: { 
+          mapId,
+          parentId: null 
+        },
+        orderBy: { position: 'desc' },
+        select: { position: true }
+      });
+      position = (maxPosition?.position || -1) + 1;
+    }
+
     // Create marker
     const marker = await prisma.marker.create({
       data: {
@@ -75,7 +100,9 @@ export async function POST(request: NextRequest) {
         zoneNumber: zoneNumber ? parseInt(zoneNumber) : null,
         deviceIcon,
         assetIcon,
-        parentId
+        parentId,
+        position,
+        childPosition
       }
     });
 
