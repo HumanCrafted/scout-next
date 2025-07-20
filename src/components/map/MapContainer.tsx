@@ -1326,11 +1326,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {/* Map Container */}
       <div 
         ref={mapContainer}
-        className={`absolute top-0 bottom-0 h-full transition-all duration-300 ${
+        className={
           screenshotMode 
-            ? 'left-0 right-0 w-full' 
-            : 'left-[280px] right-0'
-        }`}
+            ? 'absolute top-0 bottom-0 left-0 right-0 w-full h-full' 
+            : 'absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full'
+        }
         style={{ minHeight: '100vh' }}
         onDragOver={(e) => {
           e.preventDefault();
