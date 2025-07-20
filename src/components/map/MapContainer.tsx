@@ -69,6 +69,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [draggedMarkerId, setDraggedMarkerId] = useState<string | null>(null);
   const [dragOverMarkerId, setDragOverMarkerId] = useState<string | null>(null);
+  const [dragInsertPosition, setDragInsertPosition] = useState<{markerId: string, position: 'before' | 'after'} | null>(null);
+  const [dragOperation, setDragOperation] = useState<'reorder' | 'group' | null>(null);
 
   // Get current team - memoize to prevent unnecessary re-renders
   const currentTeam = useMemo(() => getCurrentTeam(), []);
@@ -1198,7 +1200,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     });
   };
 
-  // Handle marker drag and drop for grouping
+  // Handle marker drag and drop for both reordering and grouping
   const handleMarkerDragStart = (e: React.DragEvent, markerId: string) => {
     // Prevent dragging markers that have children (groups)
     const hasChildren = getChildMarkers(markers, markerId).length > 0;
@@ -1214,19 +1216,50 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const handleMarkerDragOver = (e: React.DragEvent, targetMarkerId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    setDragOverMarkerId(targetMarkerId);
+    
+    if (!draggedMarkerId) return;
+    
+    const draggedMarker = markers.find(m => m.id === draggedMarkerId);
+    const targetMarker = markers.find(m => m.id === targetMarkerId);
+    
+    if (!draggedMarker || !targetMarker) return;
+    
+    // Get mouse position relative to the target element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseY = e.clientY;
+    const elementMiddle = rect.top + rect.height / 2;
+    
+    // Check if markers are in same parent context (for reordering)
+    const sameParent = draggedMarker.parentId === targetMarker.parentId;
+    
+    if (sameParent) {
+      // This is a reorder operation - show insertion line
+      const position = mouseY < elementMiddle ? 'before' : 'after';
+      setDragInsertPosition({ markerId: targetMarkerId, position });
+      setDragOperation('reorder');
+      setDragOverMarkerId(null);
+    } else {
+      // This is a grouping operation - highlight target
+      setDragOverMarkerId(targetMarkerId);
+      setDragOperation('group');
+      setDragInsertPosition(null);
+    }
   };
 
   const handleMarkerDragLeave = () => {
     setDragOverMarkerId(null);
+    setDragInsertPosition(null);
+    setDragOperation(null);
   };
 
   const handleMarkerDrop = async (e: React.DragEvent, targetMarkerId: string) => {
     e.preventDefault();
-    setDragOverMarkerId(null);
     
     if (!draggedMarkerId || draggedMarkerId === targetMarkerId) {
       setDraggedMarkerId(null);
+      setDragOverMarkerId(null);
+      setDragInsertPosition(null);
+      setDragOperation(null);
       return;
     }
 
@@ -1235,69 +1268,77 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     
     if (!draggedMarker || !targetMarker) {
       setDraggedMarkerId(null);
+      setDragOverMarkerId(null);
+      setDragInsertPosition(null);
+      setDragOperation(null);
       return;
     }
 
-    // Check if this is a reordering operation (same parent context)
-    if (draggedMarker.parentId === targetMarker.parentId) {
-      // This is a reorder operation
-      await reorderMarkers(draggedMarkerId, targetMarkerId);
-      setDraggedMarkerId(null);
-      return;
-    }
+    if (dragOperation === 'reorder') {
+      // Handle reordering
+      const insertAfter = dragInsertPosition?.position === 'after';
+      await reorderMarkers(draggedMarkerId, targetMarkerId, insertAfter);
+    } else if (dragOperation === 'group') {
+      // Handle grouping
+      try {
+        // Calculate position for grouping operation
+        const existingChildren = getChildMarkers(markers, targetMarkerId);
+        const nextChildPosition = existingChildren.length;
 
-    try {
-      // Calculate position for grouping operation
-      const existingChildren = getChildMarkers(markers, targetMarkerId);
-      const nextChildPosition = existingChildren.length;
+        // Update marker to have new parent
+        const response = await fetch(`/api/markers/${draggedMarkerId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            parentId: targetMarkerId,
+            childPosition: nextChildPosition,
+            position: null, // Clear root position since it's now a child
+          }),
+        });
 
-      // Update marker to have new parent
-      const response = await fetch(`/api/markers/${draggedMarkerId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          parentId: targetMarkerId,
-          childPosition: nextChildPosition,
-          position: null, // Clear root position since it's now a child
-        }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setMarkers(prev => prev.map(m => 
-          m.id === draggedMarkerId 
-            ? { ...m, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
-            : m
-        ));
-        
-        // Update maps state
-        setMaps(prev => prev.map(m => 
-          m.isActive 
-            ? { 
-                ...m, 
-                markers: m.markers.map(marker => 
-                  marker.id === draggedMarkerId 
-                    ? { ...marker, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
-                    : marker
-                )
-              }
-            : m
-        ));
-      } else {
-        console.error('Failed to update marker parent:', response.status);
+        if (response.ok) {
+          // Update local state
+          setMarkers(prev => prev.map(m => 
+            m.id === draggedMarkerId 
+              ? { ...m, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
+              : m
+          ));
+          
+          // Update maps state
+          setMaps(prev => prev.map(m => 
+            m.isActive 
+              ? { 
+                  ...m, 
+                  markers: m.markers.map(marker => 
+                    marker.id === draggedMarkerId 
+                      ? { ...marker, parentId: targetMarkerId, childPosition: nextChildPosition, position: null }
+                      : marker
+                  )
+                }
+              : m
+          ));
+        } else {
+          console.error('Failed to update marker parent:', response.status);
+        }
+      } catch (error) {
+        console.error('Error updating marker parent:', error);
       }
-    } catch (error) {
-      console.error('Error updating marker parent:', error);
     }
 
+    // Clean up drag state
     setDraggedMarkerId(null);
+    setDragOverMarkerId(null);
+    setDragInsertPosition(null);
+    setDragOperation(null);
   };
 
   const handleMarkerDragEnd = () => {
     setDraggedMarkerId(null);
     setDragOverMarkerId(null);
+    setDragInsertPosition(null);
+    setDragOperation(null);
   };
 
   // Handle ungrouping by dragging away
@@ -1525,11 +1566,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                         const hasChildren = children.length > 0;
                         
                         return (
-                          <div key={marker.id}>
+                          <div key={marker.id} className="relative">
+                            {/* Insertion line before */}
+                            {dragInsertPosition?.markerId === marker.id && dragInsertPosition.position === 'before' && (
+                              <div className="absolute -top-px left-2 right-2 h-0.5 bg-primary rounded-full z-10" />
+                            )}
+                            
                             {/* Parent Marker */}
                             <div 
                               className={`group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors ${
-                                dragOverMarkerId === marker.id ? 'bg-primary/10 border-l-2 border-primary' : ''
+                                dragOverMarkerId === marker.id && dragOperation === 'group' ? 'bg-primary/10 border-l-2 border-primary' : ''
                               } ${hasChildren ? 'cursor-default' : 'cursor-grab'}`}
                               draggable={!marker.locked && !hasChildren}
                               onDragStart={(e) => handleMarkerDragStart(e, marker.id)}
@@ -1599,17 +1645,30 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                               </div>
                             </div>
                             
+                            {/* Insertion line after */}
+                            {dragInsertPosition?.markerId === marker.id && dragInsertPosition.position === 'after' && (
+                              <div className="absolute -bottom-px left-2 right-2 h-0.5 bg-primary rounded-full z-10" />
+                            )}
+                            
                             {/* Child Markers */}
                             {hasChildren && !isCollapsed && (
                               <div className="ml-6 border-l-2 border-border space-y-0.5 pl-2">
                                 {children.map((childMarker) => (
-                                  <div 
-                                    key={childMarker.id} 
-                                    className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors"
-                                    draggable={!childMarker.locked}
-                                    onDragStart={(e) => handleMarkerDragStart(e, childMarker.id)}
-                                    onDragEnd={handleMarkerDragEnd}
-                                  >
+                                  <div key={childMarker.id} className="relative">
+                                    {/* Insertion line before child */}
+                                    {dragInsertPosition?.markerId === childMarker.id && dragInsertPosition.position === 'before' && (
+                                      <div className="absolute -top-px left-2 right-2 h-0.5 bg-primary rounded-full z-10" />
+                                    )}
+                                    
+                                    <div 
+                                      className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors cursor-grab"
+                                      draggable={!childMarker.locked}
+                                      onDragStart={(e) => handleMarkerDragStart(e, childMarker.id)}
+                                      onDragOver={(e) => handleMarkerDragOver(e, childMarker.id)}
+                                      onDragLeave={handleMarkerDragLeave}
+                                      onDrop={(e) => handleMarkerDrop(e, childMarker.id)}
+                                      onDragEnd={handleMarkerDragEnd}
+                                    >
                                     <div className="flex items-center flex-1 min-w-0">
                                       <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
                                         {childMarker.type === 'search' ? 'place' : 
@@ -1664,6 +1723,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                                         <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
                                       </Button>
                                     </div>
+                                    </div>
+                                    
+                                    {/* Insertion line after child */}
+                                    {dragInsertPosition?.markerId === childMarker.id && dragInsertPosition.position === 'after' && (
+                                      <div className="absolute -bottom-px left-2 right-2 h-0.5 bg-primary rounded-full z-10" />
+                                    )}
                                   </div>
                                 ))}
                               </div>
