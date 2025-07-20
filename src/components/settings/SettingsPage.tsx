@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import MarkerCategoryManager from './MarkerCategoryManager';
 
 interface SettingsData {
   // Map Settings
@@ -358,6 +359,9 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Marker Categories */}
+        <MarkerCategoryManager teamSlug={teamSlug} />
 
         {/* Security Settings */}
         <Card>

@@ -20,8 +20,9 @@ model Team {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  maps         Map[]
-  sessions     TeamSession[]
+  maps             Map[]
+  sessions         TeamSession[]
+  markerCategories MarkerCategory[]
 
   @@map("teams")
 }
@@ -67,10 +68,11 @@ model Marker {
   label         String
   lat           Float
   lng           Float
-  type          String
-  zoneNumber    Int?
-  deviceIcon    String?
-  assetIcon     String?
+  type          String   // Keep for backward compatibility
+  categoryId    String?  // Reference to custom marker category
+  zoneNumber    Int?     // For numbered location markers (1-10)
+  deviceIcon    String?  // Legacy field, kept for backward compatibility
+  assetIcon     String?  // Legacy field, kept for backward compatibility
   locked        Boolean  @default(false)
   parentId      String?
   position      Int?     // Overall position in the map (for root markers)
@@ -79,11 +81,31 @@ model Marker {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  map         Map      @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  parent      Marker?  @relation("MarkerHierarchy", fields: [parentId], references: [id])
-  children    Marker[] @relation("MarkerHierarchy")
+  map         Map             @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  category    MarkerCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  parent      Marker?         @relation("MarkerHierarchy", fields: [parentId], references: [id])
+  children    Marker[]        @relation("MarkerHierarchy")
 
   @@map("markers")
+}
+
+// Custom marker categories for teams
+model MarkerCategory {
+  id           String   @id @default(cuid())
+  teamId       String
+  name         String   // Category name like "Devices", "Assets", etc.
+  icon         String   // Material Icons name like "memory", "build", etc.
+  backgroundColor String? // Background color style: "dark", "light", "blue", etc.
+  displayOrder Int      @default(0) // Order in toolbar
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  markers      Marker[] // Markers using this category
+
+  @@unique([teamId, name]) // Prevent duplicate category names per team
+  @@map("marker_categories")
 }
 
 // Action history for undo/redo

@@ -16,6 +16,7 @@ interface Marker {
   lat: number;
   lng: number;
   type: string;
+  categoryId?: string | null;
   zoneNumber?: number;
   deviceIcon?: string;
   assetIcon?: string;
@@ -24,6 +25,14 @@ interface Marker {
   position?: number | null;
   childPosition?: number | null;
   children?: Marker[];
+}
+
+interface MarkerCategory {
+  id: string;
+  name: string;
+  icon: string;
+  backgroundColor: string;
+  displayOrder: number;
 }
 
 interface MapContainerProps {
@@ -36,6 +45,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
+  const [markerCategories, setMarkerCategories] = useState<MarkerCategory[]>([]);
   const [mapId, setMapId] = useState<string | null>(null);
   const [mapTitle, setMapTitle] = useState('Untitled Map');
   const [zoom, setZoom] = useState(4.2);
@@ -60,10 +70,10 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
-    type: string;
-    zoneNumber?: number;
-    deviceIcon?: string;
-    assetIcon?: string;
+    categoryId: string;
+    categoryName: string;
+    icon: string;
+    zoneNumber?: number; // For numbered location markers
   } | null>(null);
   
   // Marker grouping state
@@ -75,6 +85,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
 
   // Get current team - memoize to prevent unnecessary re-renders
   const currentTeam = useMemo(() => getCurrentTeam(), []);
+  const teamSlug = currentTeam?.name || 'masen'; // Fallback to masen for now
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -118,6 +129,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         map.current.on('load', () => {
           updateZoom();
           loadTeamData();
+          loadMarkerCategories();
           initializeSearchBox();
           
           // Force resize after a short delay
@@ -180,6 +192,41 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     } catch (error) {
       console.error('Error loading team data:', error);
     }
+  };
+
+  // Load marker categories for the team
+  const loadMarkerCategories = async () => {
+    if (!teamSlug) return;
+
+    try {
+      const response = await fetch(`/api/teams/${teamSlug}/categories`);
+      if (response.ok) {
+        const data = await response.json();
+        setMarkerCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error loading marker categories:', error);
+    }
+  };
+
+  // Get next auto-number for a category
+  const getNextCategoryNumber = (categoryName: string): number => {
+    const existingMarkers = markers.filter(marker => 
+      marker.label.toLowerCase().startsWith(categoryName.toLowerCase())
+    );
+    
+    let maxNumber = 0;
+    existingMarkers.forEach(marker => {
+      const match = marker.label.match(new RegExp(`^${categoryName}\\s+(\\d+)$`, 'i'));
+      if (match) {
+        const num = parseInt(match[1]);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    });
+    
+    return maxNumber + 1;
   };
 
   // Create default map for team
@@ -453,7 +500,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           });
         }
         
-        await addMarkerToMap(lng, lat, placeName, 'search', undefined, undefined, undefined);
+        await addMarkerToMap(lng, lat, placeName, 'search');
       } else {
         alert('No results found for: ' + query);
       }
@@ -482,7 +529,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         }
         
         const label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        addMarkerToMap(lng, lat, label, 'search', undefined, undefined, undefined);
+        addMarkerToMap(lng, lat, label, 'search');
         return true;
       }
     }
@@ -997,7 +1044,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   };
 
   // Add marker to map and database
-  const addMarkerToMap = useCallback(async (lng: number, lat: number, label: string, type: string, zoneNumber?: number, deviceIcon?: string, assetIcon?: string) => {
+  const addMarkerToMap = useCallback(async (lng: number, lat: number, label: string, categoryId: string) => {
     const currentMapId = mapIdRef.current;
     
     if (!currentMapId) {
@@ -1008,6 +1055,19 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     if (!map.current) {
       console.error('No map instance available for adding marker');
       return;
+    }
+
+    // Find the category for styling (or handle special search case)
+    let category;
+    if (categoryId === 'search') {
+      // Special case for search result markers
+      category = { id: 'search', name: 'Search', icon: 'location_on', backgroundColor: 'light' };
+    } else {
+      category = markerCategories.find(cat => cat.id === categoryId);
+      if (!category) {
+        console.error('Category not found for marker creation');
+        return;
+      }
     }
 
     try {
@@ -1022,10 +1082,8 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           label,
           lat,
           lng,
-          type,
-          zoneNumber,
-          deviceIcon,
-          assetIcon
+          ...(categoryId !== 'search' && { categoryId }),
+          ...(categoryId === 'search' && { type: 'search' })
         }),
       });
 
@@ -1039,9 +1097,9 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           m.isActive ? { ...m, markers: [...m.markers, marker] } : m
         ));
         
-        // Create custom marker element based on type
+        // Create custom marker element based on category
         const el = document.createElement('div');
-        el.className = `custom-marker ${type}`;
+        el.className = `custom-marker category-${category.id}`;
         el.style.cssText = `
           width: 30px;
           height: 30px;
@@ -1057,34 +1115,31 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         
-        // Set background color and content based on type
-        if (type === 'search') {
-          // Search result pin - use location_on icon like v1
-          el.style.backgroundColor = 'rgb(243, 243, 243)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          el.innerHTML = '<span class="material-icons" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
-        } else if (type === 'location') {
+        // Set background color and content based on category
+        if (category.backgroundColor === 'dark') {
           el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
           el.style.color = 'hsl(210 40% 98%)';
-          el.textContent = zoneNumber?.toString() || 'L';
-        } else if (type === 'device') {
+          
+          // Check if this is a numbered marker (contains number in label)
+          const numberMatch = label.match(/(\d+)$/);
+          if (numberMatch) {
+            el.textContent = numberMatch[1];
+          } else {
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${category.icon}</span>`;
+          }
+        } else {
+          // Light background
           el.style.backgroundColor = 'rgb(243, 243, 243)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          const icon = deviceIcon || 'memory';
           
-          if (icon === 'solar-panel') {
+          if (category.icon === 'solar-panel') {
             el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
               <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
             </svg>`;
           } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${category.icon}</span>`;
           }
-        } else if (type === 'assets') {
-          el.style.backgroundColor = 'rgb(243, 243, 243)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          const icon = assetIcon || 'build';
-          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
         
         // Create popup with slot styling - marker sits inside left rounded end
@@ -1174,7 +1229,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     } catch (error) {
       console.error('Error adding marker:', error);
     }
-  }, []);
+  }, [markerCategories]);
 
   // Helper functions for marker grouping
   const getParentMarkers = (markers: Marker[]) => {
@@ -1871,25 +1926,22 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           
           const lngLat = map.current.unproject([x, y]);
           
+          // Generate label with auto-numbering
           let label;
-          if (draggedPinType.type === 'location') {
-            label = `Location ${draggedPinType.zoneNumber}`;
-          } else if (draggedPinType.type === 'device') {
-            label = 'Device';
-          } else if (draggedPinType.type === 'assets') {
-            label = 'Asset';
+          if (draggedPinType.zoneNumber) {
+            // For numbered locations (1-10)
+            label = `${draggedPinType.categoryName} ${draggedPinType.zoneNumber}`;
           } else {
-            label = draggedPinType.type.charAt(0).toUpperCase() + draggedPinType.type.slice(1);
+            // For regular categories, auto-number them
+            const nextNumber = getNextCategoryNumber(draggedPinType.categoryName);
+            label = `${draggedPinType.categoryName} ${nextNumber}`;
           }
           
           addMarkerToMap(
             lngLat.lng, 
             lngLat.lat, 
             label, 
-            draggedPinType.type, 
-            draggedPinType.zoneNumber,
-            draggedPinType.deviceIcon,
-            draggedPinType.assetIcon
+            draggedPinType.categoryId
           );
           
           setDraggedPinType(null);
@@ -1951,178 +2003,90 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         </Button>
       </div>
 
-      {/* Right Pin Toolbar */}
+      {/* Right Pin Toolbar - Dynamic Categories */}
       <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
-        {/* Locations */}
-        <div className="mb-4">
-          <h4 className="text-xs font-medium mb-2 text-muted-foreground">Locations</h4>
-          <div className="flex flex-wrap gap-1 justify-start">
-            {[1,2,3,4,5,6,7,8,9,10].map(num => (
-              <div
-                key={num}
-                className="w-8 h-8 bg-foreground border-2 border-border rounded-full cursor-grab flex items-center justify-center text-white text-xs font-bold transition-all hover:bg-foreground/80 hover:scale-105 active:cursor-grabbing"
-                draggable={true}
-                title={`Location ${num}`}
-                onDragStart={(e) => {
-                  setDraggedPinType({
-                    type: 'location',
-                    zoneNumber: num
-                  });
-                  e.dataTransfer.effectAllowed = 'copy';
-                }}
-                onDragEnd={() => {
-                  setDraggedPinType(null);
-                }}
-              >
-                {num}
+        {markerCategories.length === 0 ? (
+          <div className="text-center text-xs text-muted-foreground p-2">
+            No categories configured. Add categories in Settings.
+          </div>
+        ) : (
+          markerCategories.map((category) => {
+            // Get background color class
+            const getBgClass = (bgColor: string) => {
+              switch (bgColor) {
+                case 'dark': return 'bg-foreground text-white';
+                case 'light': return 'bg-muted text-foreground';
+                case 'blue': return 'bg-blue-500 text-white';
+                case 'green': return 'bg-green-500 text-white';
+                case 'red': return 'bg-red-500 text-white';
+                case 'yellow': return 'bg-yellow-500 text-white';
+                case 'purple': return 'bg-purple-500 text-white';
+                case 'orange': return 'bg-orange-500 text-white';
+                default: return 'bg-muted text-foreground';
+              }
+            };
+
+            // Handle special case for "Locations" category (numbered 1-10)
+            if (category.name.toLowerCase() === 'locations') {
+              return (
+                <div key={category.id} className="mb-4">
+                  <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
+                  <div className="flex flex-wrap gap-1 justify-start">
+                    {[1,2,3,4,5,6,7,8,9,10].map(num => (
+                      <div
+                        key={num}
+                        className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(category.backgroundColor)}`}
+                        draggable={true}
+                        title={`${category.name} ${num}`}
+                        onDragStart={(e) => {
+                          setDraggedPinType({
+                            categoryId: category.id,
+                            categoryName: category.name,
+                            icon: category.icon,
+                            zoneNumber: num
+                          });
+                          e.dataTransfer.effectAllowed = 'copy';
+                        }}
+                        onDragEnd={() => {
+                          setDraggedPinType(null);
+                        }}
+                      >
+                        {num}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            // Regular category (single icon)
+            return (
+              <div key={category.id} className="mb-4">
+                <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
+                <div className="flex flex-wrap gap-1">
+                  <div
+                    className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(category.backgroundColor)}`}
+                    draggable={true}
+                    title={category.name}
+                    onDragStart={(e) => {
+                      setDraggedPinType({
+                        categoryId: category.id,
+                        categoryName: category.name,
+                        icon: category.icon
+                      });
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    onDragEnd={() => {
+                      setDraggedPinType(null);
+                    }}
+                  >
+                    <span className="material-icons" style={{fontSize: '16px'}}>{category.icon}</span>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Devices */}
-        <div className="mb-4">
-          <h4 className="text-xs font-medium mb-2 text-muted-foreground">Devices</h4>
-          <div className="flex flex-wrap gap-1">
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Memory Device"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'device',
-                  deviceIcon: 'memory'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>memory</span>
-            </div>
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="WiFi Device"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'device',
-                  deviceIcon: 'wifi'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>wifi</span>
-            </div>
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Solar Panel"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'device',
-                  deviceIcon: 'solar-panel'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 fill-current">
-                <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* Assets */}
-        <div className="mb-4">
-          <h4 className="text-xs font-medium mb-2 text-muted-foreground">Assets</h4>
-          <div className="flex flex-wrap gap-1">
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Build Tool"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'assets',
-                  assetIcon: 'build'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>build</span>
-            </div>
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Network"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'assets',
-                  assetIcon: 'lan'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>lan</span>
-            </div>
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Warning"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'assets',
-                  assetIcon: 'warning'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>warning</span>
-            </div>
-            <div
-              className="w-8 h-8 bg-muted border-2 border-border rounded-full cursor-grab flex items-center justify-center text-foreground transition-all hover:bg-muted/80 hover:scale-105 active:cursor-grabbing"
-              draggable={true}
-              title="Power"
-              onDragStart={(e) => {
-                setDraggedPinType({
-                  type: 'assets',
-                  assetIcon: 'power'
-                });
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onDragEnd={() => {
-                setDraggedPinType(null);
-              }}
-            >
-              <span className="material-icons" style={{fontSize: '16px'}}>power</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Clear Button */}
-        <Button 
-          onClick={clearMarkers}
-          className="w-full text-xs"
-          variant="outline"
-        >
-          Clear
-        </Button>
+            );
+          })
+        )}
       </div>
 
       {/* Screenshot Mode Exit Button */}
