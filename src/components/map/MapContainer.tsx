@@ -303,14 +303,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       
       // Create popup with slot styling - marker sits inside left rounded end
       const popup = new mapboxgl.Popup({ 
-        offset: [-20, 0], // Position so marker center is concentric with slot's left rounded end
+        offset: [-17, 0], // Position so marker center is concentric with slot's left rounded end (slot radius = 17px)
         anchor: 'left',
         closeButton: false,
         closeOnClick: false
       }).setHTML(`<div style="
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 6px 16px 6px 35px;
+        padding: 6px 16px 6px 42px;
         border-radius: 17px;
         font-size: 12px;
         font-weight: 500;
@@ -854,7 +854,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
               color: white;
-              padding: 6px 16px 6px 35px;
+              padding: 6px 16px 6px 42px;
               border-radius: 17px;
               height: 34px;
               display: flex;
@@ -973,14 +973,14 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         
         // Create popup with slot styling - marker sits inside left rounded end
         const popup = new mapboxgl.Popup({ 
-          offset: [-20, 0], // Position so marker center is concentric with slot's left rounded end
+          offset: [-17, 0], // Position so marker center is concentric with slot's left rounded end (slot radius = 17px)
           anchor: 'left',
           closeButton: false,
           closeOnClick: false
         }).setHTML(`<div style="
           background: rgba(0, 0, 0, 0.8);
           color: white;
-          padding: 6px 16px 6px 35px;
+          padding: 6px 16px 6px 42px;
           border-radius: 17px;
           font-size: 12px;
           font-weight: 500;
