@@ -1063,7 +1063,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   return (
     <div className="relative h-screen">
       {/* Left Sidebar */}
-      <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto flex flex-col">
+      <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] flex flex-col">
         {/* Header */}
         <div className="px-2 py-3 border-b border-border">
           <h1 className="text-lg font-semibold text-foreground ml-2">{teamName.split(' ')[0]}</h1>
@@ -1078,7 +1078,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         </div>
 
         {/* Maps/Files Section */}
-        <div className="flex-1 px-1 py-3">
+        <div className="flex-1 px-1 py-3 overflow-y-auto">
           {/* Maps Header */}
           <div className="flex items-center justify-between mb-3 px-2">
             <h4 className="text-xs font-medium text-muted-foreground">MAPS</h4>
