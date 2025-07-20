@@ -104,7 +104,7 @@ mapbox-search-box input:focus {
   box-shadow: 0 0 0 2px hsl(222.2 84% 4.9% / 0.1) !important;
 }
 
-/* Mapbox Popup Styling - Ensure popups are visible */
+/* Mapbox Popup Styling - Override default styling for custom dark tooltips */
 .mapboxgl-popup {
   z-index: 9999 !important;
 }
@@ -114,9 +114,15 @@ mapbox-search-box input:focus {
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
+  border: none !important;
+  pointer-events: none !important;
 }
 
 .mapboxgl-popup-tip {
+  display: none !important;
+}
+
+.mapboxgl-popup-close-button {
   display: none !important;
 }
 

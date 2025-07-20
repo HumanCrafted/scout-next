@@ -308,32 +308,26 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         closeButton: false,
         closeOnClick: false
       }).setHTML(`<div style="
-        background: rgba(0, 0, 0, 0.8) !important;
-        color: white !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
-        font-size: 12px !important;
-        font-weight: 500 !important;
-        white-space: nowrap !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
-        z-index: 9999 !important;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
       ">${marker.label}</div>`);
       
-      // Add marker to map
+      // Add marker to map with popup
       const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: !marker.locked })
         .setLngLat([marker.lng, marker.lat])
+        .setPopup(popup)
         .addTo(map.current!);
         
       // Show popup immediately if labels are visible
-      console.log('renderExistingMarkers - labelsVisible:', labelsVisible, 'for marker:', marker.label);
       if (labelsVisible) {
-        console.log('Adding popup to map for:', marker.label);
         popup.addTo(map.current!);
       }
-      
-      // Store popup reference for toggling
-      (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
-      console.log('Stored popup reference for:', marker.label);
       
       // Add drag end event to update position in database
       mapboxMarker.on('dragend', async () => {
@@ -850,8 +844,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         const mapboxMarker = markersRef.current[editingMarker.id];
         if (mapboxMarker) {
           mapboxMarker.setLngLat([lng, lat]);
-          // Update popup content using custom popup storage
-          const popup = (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup;
+          // Update popup content
+          const popup = mapboxMarker.getPopup();
           if (popup) {
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
@@ -976,32 +970,26 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           closeButton: false,
           closeOnClick: false
         }).setHTML(`<div style="
-          background: rgba(0, 0, 0, 0.8) !important;
-          color: white !important;
-          padding: 4px 8px !important;
-          border-radius: 4px !important;
-          font-size: 12px !important;
-          font-weight: 500 !important;
-          white-space: nowrap !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
-          z-index: 9999 !important;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          white-space: nowrap;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         ">${label}</div>`);
         
-        // Add marker to map
+        // Add marker to map with popup
         const mapboxMarker = new mapboxgl.Marker({ element: el, draggable: true })
           .setLngLat([lng, lat])
+          .setPopup(popup)
           .addTo(map.current);
           
         // Show popup immediately if labels are visible
-        console.log('addMarkerToMap - labelsVisible:', labelsVisible, 'for marker:', label);
         if (labelsVisible) {
-          console.log('Adding popup to map for new marker:', label);
           popup.addTo(map.current!);
         }
-        
-        // Store popup reference for toggling
-        (mapboxMarker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup = popup;
-        console.log('Stored popup reference for new marker:', label);
         
         // Add drag end event to update position in database
         mapboxMarker.on('dragend', async () => {
@@ -1308,20 +1296,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           className="text-xs px-2 py-1 h-auto"
           onClick={() => {
             const newLabelsVisible = !labelsVisible;
-            console.log('Labels toggle clicked. Current:', labelsVisible, 'New:', newLabelsVisible);
-            console.log('Number of markers in markersRef:', Object.keys(markersRef.current).length);
             setLabelsVisible(newLabelsVisible);
             
-            // Toggle popups for all current markers using custom popup storage
-            Object.values(markersRef.current).forEach((marker, index) => {
-              const popup = (marker as mapboxgl.Marker & { _customPopup?: mapboxgl.Popup })._customPopup;
-              console.log(`Marker ${index}:`, popup ? 'has popup' : 'NO POPUP');
+            // Toggle popups for all current markers
+            Object.values(markersRef.current).forEach(marker => {
+              const popup = marker.getPopup();
               if (popup) {
                 if (newLabelsVisible) {
-                  console.log(`Adding popup ${index} to map`);
                   popup.addTo(map.current!);
                 } else {
-                  console.log(`Removing popup ${index} from map`);
                   popup.remove();
                 }
               }
