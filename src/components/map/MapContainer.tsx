@@ -1143,7 +1143,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '16px'}}>add_circle</span>
+              <span className="material-icons" style={{fontSize: '16px'}}>add_circle_outline</span>
             </button>
           </div>
           <div className="space-y-2">
