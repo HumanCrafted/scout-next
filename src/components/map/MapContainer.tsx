@@ -36,6 +36,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   const [zoom, setZoom] = useState(4.2);
   const [currentStyle, setCurrentStyle] = useState<'satellite' | 'street'>('satellite');
   const [labelsVisible, setLabelsVisible] = useState(true);
+  const [screenshotMode, setScreenshotMode] = useState(false);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const mapIdRef = useRef<string | null>(null);
   
@@ -787,6 +788,61 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
     }
   };
 
+  // Toggle marker lock state
+  const toggleMarkerLock = async (markerId: string) => {
+    try {
+      // Find the marker in state
+      const marker = markers.find(m => m.id === markerId);
+      if (!marker) return;
+      
+      const newLockedState = !marker.locked;
+      
+      // Update in database
+      const response = await fetch(`/api/markers/${markerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          locked: newLockedState,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMarkers(prev => prev.map(m => 
+          m.id === markerId ? { ...m, locked: newLockedState } : m
+        ));
+        
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { 
+                ...m, 
+                markers: m.markers.map(marker => 
+                  marker.id === markerId 
+                    ? { ...marker, locked: newLockedState }
+                    : marker
+                )
+              }
+            : m
+        ));
+        
+        // Update draggable state on the map marker
+        const mapboxMarker = markersRef.current[markerId];
+        if (mapboxMarker) {
+          mapboxMarker.setDraggable(!newLockedState);
+        }
+      } else {
+        console.error('Failed to toggle marker lock:', response.status);
+        alert('Failed to toggle marker lock. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling marker lock:', error);
+      alert('Error toggling marker lock. Please try again.');
+    }
+  };
+
   // Edit marker
   const editMarker = (marker: Marker) => {
     setEditingMarker(marker);
@@ -1165,6 +1221,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                               size="sm"
                               className="h-6 w-6 p-0"
                               title={marker.locked ? 'Unlock marker' : 'Lock marker'}
+                              onClick={() => toggleMarkerLock(marker.id)}
                             >
                               <span className="material-icons" style={{fontSize: '12px'}}>
                                 {marker.locked ? 'lock' : 'lock_open'}
@@ -1202,9 +1259,29 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         {/* Footer */}
         <div className="px-2 py-3 border-t border-border space-y-0.5">
           <button 
-            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
+            className={`w-full flex items-center px-2 py-2 hover:bg-muted rounded-md transition-colors ${
+              screenshotMode ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
             style={{fontSize: '0.75rem', fontWeight: '500'}}
             title="Screenshot mode"
+            onClick={() => {
+              const newScreenshotMode = !screenshotMode;
+              setScreenshotMode(newScreenshotMode);
+              
+              if (newScreenshotMode) {
+                // Enable labels for screenshots
+                if (!labelsVisible) {
+                  setLabelsVisible(true);
+                  // Show all popups
+                  Object.values(markersRef.current).forEach(marker => {
+                    const popup = marker.getPopup();
+                    if (popup) {
+                      popup.addTo(map.current!);
+                    }
+                  });
+                }
+              }
+            }}
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
             Screenshot Mode
@@ -1240,7 +1317,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {/* Map Container */}
       <div 
         ref={mapContainer}
-        className="absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full"
+        className={`absolute top-0 bottom-0 h-full transition-all duration-300 ${
+          screenshotMode 
+            ? 'left-0 right-0 w-full' 
+            : 'left-[280px] right-0 w-[calc(100%-280px)]'
+        }`}
         style={{ minHeight: '100vh' }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -1282,7 +1363,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       />
 
       {/* Bottom Controls */}
-      <div className="fixed bottom-8 right-3 bg-white text-foreground p-3 rounded-lg text-xs font-medium z-[1000] border border-border shadow-lg flex items-center gap-3">
+      <div className={`fixed bottom-8 right-3 bg-white text-foreground p-3 rounded-lg text-xs font-medium z-[1000] border border-border shadow-lg flex items-center gap-3 transition-transform duration-300 ${
+        screenshotMode ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'
+      }`}>
         <div className="text-foreground">Zoom: {zoom}</div>
         <div className="flex gap-1">
           <Button
