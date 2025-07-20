@@ -1283,12 +1283,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 }
               }
               
-              // Force map resize after screenshot mode change with longer delay
+              // Force map resize after screenshot mode change
               setTimeout(() => {
                 if (map.current) {
                   map.current.resize();
                 }
-              }, 100);
+              }, 50);
             }}
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
@@ -1326,22 +1326,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {/* Map Container */}
       <div 
         ref={mapContainer}
-        className={`absolute top-0 bottom-0 h-full ${
+        className={`absolute top-0 bottom-0 h-full transition-all duration-300 ${
           screenshotMode 
             ? 'left-0 right-0 w-full' 
-            : 'left-[280px] right-0'
+            : 'left-[280px] right-0 w-[calc(100%-280px)]'
         }`}
-        style={{ 
-          minHeight: '100vh',
-          ...(screenshotMode ? { 
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw', 
-            height: '100vh',
-            zIndex: 1500
-          } : {})
-        }}
+        style={{ minHeight: '100vh' }}
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'copy';
@@ -1618,15 +1608,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {screenshotMode && (
         <button 
           className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transition-colors"
-          onClick={() => {
-            setScreenshotMode(false);
-            // Force map resize when exiting screenshot mode
-            setTimeout(() => {
-              if (map.current) {
-                map.current.resize();
-              }
-            }, 100);
-          }}
+          onClick={() => setScreenshotMode(false)}
         >
           Exit Screenshot Mode
         </button>
