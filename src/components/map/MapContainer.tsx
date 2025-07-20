@@ -1066,7 +1066,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="px-2 py-3 border-b border-border">
-          <h1 className="text-lg font-semibold text-foreground ml-1">{teamName.split(' ')[0]}</h1>
+          <h1 className="text-lg font-semibold text-foreground ml-2">{teamName.split(' ')[0]}</h1>
         </div>
 
         {/* Search */}
