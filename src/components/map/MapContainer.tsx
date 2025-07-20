@@ -1661,7 +1661,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                                     )}
                                     
                                     <div 
-                                      className="group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors cursor-grab"
+                                      className={`group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors cursor-grab ${
+                                        dragOverMarkerId === childMarker.id && dragOperation === 'group' ? 'bg-primary/10 border-l-2 border-primary' : ''
+                                      }`}
                                       draggable={!childMarker.locked}
                                       onDragStart={(e) => handleMarkerDragStart(e, childMarker.id)}
                                       onDragOver={(e) => handleMarkerDragOver(e, childMarker.id)}
