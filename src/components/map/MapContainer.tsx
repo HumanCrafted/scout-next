@@ -1245,10 +1245,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       setDragInsertPosition({ markerId: targetMarkerId, position });
       setDragOperation('reorder');
       setDragOverMarkerId(null);
-    } else {
-      // This is a grouping operation - highlight target
+    } else if (targetMarker.parentId === null) {
+      // This is a grouping operation - only allow grouping onto root/parent markers
+      // Child markers (those with parentId) cannot be group targets
       setDragOverMarkerId(targetMarkerId);
       setDragOperation('group');
+      setDragInsertPosition(null);
+    } else {
+      // Target is a child marker - no operation allowed
+      setDragOverMarkerId(null);
+      setDragOperation(null);
       setDragInsertPosition(null);
     }
   };
@@ -1286,7 +1292,16 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       const insertAfter = dragInsertPosition?.position === 'after';
       await reorderMarkers(draggedMarkerId, targetMarkerId, insertAfter);
     } else if (dragOperation === 'group') {
-      // Handle grouping
+      // Handle grouping - only allow grouping onto root/parent markers
+      if (targetMarker.parentId !== null) {
+        // Cannot group onto child markers
+        setDraggedMarkerId(null);
+        setDragOverMarkerId(null);
+        setDragInsertPosition(null);
+        setDragOperation(null);
+        return;
+      }
+      
       try {
         // Calculate position for grouping operation
         const existingChildren = getChildMarkers(markers, targetMarkerId);
