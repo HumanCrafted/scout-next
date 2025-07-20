@@ -106,7 +106,7 @@ mapbox-search-box input:focus {
 
 /* Mapbox Popup Styling - Override default styling for custom dark tooltips */
 .mapboxgl-popup {
-  z-index: 9999 !important;
+  z-index: 1 !important; /* Labels behind markers but above map */
 }
 
 .mapboxgl-popup-content {
@@ -124,5 +124,15 @@ mapbox-search-box input:focus {
 
 .mapboxgl-popup-close-button {
   display: none !important;
+}
+
+/* Custom marker styling - ensure markers appear above labels */
+.custom-marker {
+  z-index: 10 !important;
+  position: relative;
+}
+
+.mapboxgl-marker {
+  z-index: 10 !important;
 }
 

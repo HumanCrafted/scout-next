@@ -850,8 +850,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
             popup.setHTML(`<div style="
               background: rgba(0, 0, 0, 0.8);
               color: white;
-              padding: 4px 8px;
-              border-radius: 4px;
+              padding: 8px 16px 8px 24px;
+              border-radius: 20px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              min-width: 60px;
               font-size: 12px;
               font-weight: 500;
               white-space: nowrap;
@@ -963,21 +967,25 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
         
-        // Create popup with nice styling
+        // Create popup with slot styling - pill shape with left end concentric with marker
         const popup = new mapboxgl.Popup({ 
-          offset: [25, 0],
+          offset: [3, 0], // Adjusted so left end of slot aligns with marker center
           anchor: 'left',
           closeButton: false,
           closeOnClick: false
         }).setHTML(`<div style="
           background: rgba(0, 0, 0, 0.8);
           color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
+          padding: 8px 16px 8px 24px;
+          border-radius: 20px;
           font-size: 12px;
           font-weight: 500;
           white-space: nowrap;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          height: 40px;
+          display: flex;
+          align-items: center;
+          min-width: 60px;
         ">${label}</div>`);
         
         // Add marker to map with popup
