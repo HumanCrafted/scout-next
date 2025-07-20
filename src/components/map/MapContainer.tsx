@@ -1194,6 +1194,13 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
 
   // Handle marker drag and drop for grouping
   const handleMarkerDragStart = (e: React.DragEvent, markerId: string) => {
+    // Prevent dragging markers that have children (groups)
+    const hasChildren = getChildMarkers(markers, markerId).length > 0;
+    if (hasChildren) {
+      e.preventDefault();
+      return;
+    }
+    
     setDraggedMarkerId(markerId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -1401,8 +1408,8 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                             <div 
                               className={`group flex items-center justify-between px-2 py-1 hover:bg-muted rounded-md transition-colors ${
                                 dragOverMarkerId === marker.id ? 'bg-primary/10 border-l-2 border-primary' : ''
-                              }`}
-                              draggable={!marker.locked}
+                              } ${hasChildren ? 'cursor-default' : 'cursor-grab'}`}
+                              draggable={!marker.locked && !hasChildren}
                               onDragStart={(e) => handleMarkerDragStart(e, marker.id)}
                               onDragOver={(e) => handleMarkerDragOver(e, marker.id)}
                               onDragLeave={handleMarkerDragLeave}
