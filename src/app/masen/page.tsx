@@ -21,11 +21,19 @@ export default function MasenTeamPage() {
     const checkAuth = async () => {
       const currentTeam = getCurrentTeam();
       if (currentTeam && currentTeam.name === 'masen') {
-        // Validate session with server
-        const { valid } = await validateSession();
-        if (valid) {
+        // Validate session with server and get fresh team data
+        const { valid, team } = await validateSession();
+        if (valid && team) {
           setIsAuthenticated(true);
-          setTeamDisplayName(currentTeam.displayName);
+          setTeamDisplayName(team.displayName);
+          
+          // Update localStorage with fresh team data
+          const sessionStr = localStorage.getItem('scout-session');
+          if (sessionStr) {
+            const session = JSON.parse(sessionStr);
+            session.team = team;
+            localStorage.setItem('scout-session', JSON.stringify(session));
+          }
         }
       }
       setIsLoading(false);
@@ -41,13 +49,9 @@ export default function MasenTeamPage() {
     try {
       const result = await loginTeam('masen', password);
       
-      if (result.success) {
+      if (result.success && result.team) {
         setIsAuthenticated(true);
-        // Get updated team info after login
-        const currentTeam = getCurrentTeam();
-        if (currentTeam) {
-          setTeamDisplayName(currentTeam.displayName);
-        }
+        setTeamDisplayName(result.team.displayName);
       } else {
         setError(result.error || 'Invalid password');
       }

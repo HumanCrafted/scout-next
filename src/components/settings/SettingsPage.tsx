@@ -57,12 +57,12 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
 
   useEffect(() => {
     // Load current team data and settings
-    const currentTeam = localStorage.getItem('scout-team');
+    const sessionStr = localStorage.getItem('scout-session');
     let currentTeamName = teamSlug;
     
-    if (currentTeam) {
-      const teamData = JSON.parse(currentTeam);
-      currentTeamName = teamData.displayName || teamSlug;
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      currentTeamName = session.team?.displayName || teamSlug;
     }
     
     // Load settings from localStorage
@@ -89,8 +89,8 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
       localStorage.setItem(`scout-settings-${teamSlug}`, JSON.stringify(settings));
       
       // Get current team display name for comparison
-      const currentTeam = localStorage.getItem('scout-team');
-      const currentDisplayName = currentTeam ? JSON.parse(currentTeam).displayName : teamSlug;
+      const sessionStr = localStorage.getItem('scout-session');
+      const currentDisplayName = sessionStr ? JSON.parse(sessionStr).team?.displayName : teamSlug;
       
       // Save team name to database if it changed
       if (settings.teamName !== currentDisplayName) {
@@ -104,11 +104,11 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
 
         if (response.ok) {
           // Update local session data
-          const currentTeam = localStorage.getItem('scout-team');
-          if (currentTeam) {
-            const teamData = JSON.parse(currentTeam);
-            teamData.displayName = settings.teamName;
-            localStorage.setItem('scout-team', JSON.stringify(teamData));
+          const sessionStr = localStorage.getItem('scout-session');
+          if (sessionStr) {
+            const session = JSON.parse(sessionStr);
+            session.team.displayName = settings.teamName;
+            localStorage.setItem('scout-session', JSON.stringify(session));
           }
           
           // Refresh the page to update the team name display
@@ -127,8 +127,8 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
   };
 
   const handleResetSettings = () => {
-    const currentTeam = localStorage.getItem('scout-team');
-    const currentDisplayName = currentTeam ? JSON.parse(currentTeam).displayName : teamSlug;
+    const sessionStr = localStorage.getItem('scout-session');
+    const currentDisplayName = sessionStr ? JSON.parse(sessionStr).team?.displayName : teamSlug;
     setSettings({ ...defaultSettings, teamName: currentDisplayName });
     setIsDirty(true);
   };
