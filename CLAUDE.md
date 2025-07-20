@@ -43,8 +43,14 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
   - Compact control buttons to save sidebar space
 - Draggable markers on map for repositioning (when unlocked)
 - **Hierarchical grouping**: Drag markers in sidebar to create parent-child relationships
+- **Advanced drag behaviors**:
+  - **Drag-to-reorder**: Horizontal blue insertion lines show exact placement position
+  - **Drag-to-group**: Blue border highlight on target marker for grouping
+  - **Smart detection**: Mouse position automatically determines operation type
+- **Position-based ordering**: Database-persisted marker positions for consistent ordering
 - Drag-off functionality to remove markers from groups
 - Visual hierarchy with left borders for grouped markers
+- Collapsible groups with expand/collapse functionality
 
 ### 🎨 User Interface
 - **Left sidebar**: Start New Map button, search box, map title editor, and placed markers list
@@ -73,6 +79,9 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 ### ⚙️ Technical Features
 - Icon-specific data persistence (deviceIcon, assetIcon fields)
 - Hierarchical marker organization with parent-child relationships
+- **Position-based ordering system**: Database fields for position tracking and drag-to-reorder
+- **Advanced drag detection**: Mouse position analysis for operation type determination
+- **Dual drag behaviors**: Distinct visual feedback for reordering vs grouping operations
 - Event-driven architecture for map interactions
 - Optimized for industrial use with clear, professional styling
 - Responsive design with fixed sidebar layout
@@ -185,6 +194,33 @@ scout-next/
 - **API Architecture**: RESTful endpoints for all CRUD operations
 - **TypeScript**: Full type safety with interfaces and validation
 
+### Phase 11: Advanced Drag & Drop System (2025-01-20) - COMPLETED ✅
+- **Position-Based Ordering**: Implemented database fields for marker position tracking
+  - `position` field for root-level marker ordering
+  - `childPosition` field for child marker ordering within groups
+  - Database migration: `20250720165624_add_marker_positions`
+- **Enhanced Drag Behaviors**: Separated drag-to-reorder from drag-to-group operations
+  - **Drag-to-reorder**: Shows horizontal blue insertion lines between markers
+  - **Drag-to-group**: Shows blue border highlight on target marker
+  - **Smart operation detection**: Mouse position analysis determines intent
+- **Visual Feedback Improvements**: 
+  - Insertion lines appear above/below markers during reorder operations
+  - Border highlighting for grouping operations on both parent and child markers
+  - Clear distinction between operation types
+- **Database Schema Updates**: 
+  - Added `position` and `childPosition` fields to Marker model
+  - Updated API endpoints to handle position updates
+  - Automatic position assignment for new markers
+- **UI/UX Enhancements**:
+  - CSS-based screenshot mode implementation (fixed white box issues)
+  - Fixed add button icon display (Material Icons integration)
+  - Prevention of double nesting (groups cannot be dragged onto other groups)
+  - Mouse position-based insertion point calculation
+- **API Improvements**:
+  - Enhanced marker creation to auto-assign positions
+  - Position-based ordering in database queries
+  - Support for position updates during grouping/ungrouping operations
+
 ## Current State (Next.js Migration Complete!)
 The application has been successfully migrated to Next.js with significant enhancements:
 
@@ -204,6 +240,12 @@ The application has been successfully migrated to Next.js with significant enhan
 - **Team workspaces**: URL-based team access (`/masen`, `/move`, etc.)
 - **Real-time persistence**: All changes automatically saved to Vercel Postgres
 - **Responsive design**: Mobile-optimized interface with touch support
+- **Advanced drag & drop**: 
+  - Position-based ordering with database persistence
+  - Dual drag behaviors (reorder vs group) with distinct visual feedback
+  - Smart operation detection based on mouse position
+  - Horizontal insertion lines for precise reordering
+  - Blue border highlighting for grouping operations
 
 ### ✅ Technical Infrastructure
 - **API Routes**: RESTful endpoints for maps, markers, teams, and authentication
@@ -498,6 +540,8 @@ CREATE TABLE markers (
   asset_icon TEXT,
   locked BOOLEAN DEFAULT FALSE,
   parent_id UUID REFERENCES markers(id),
+  position INTEGER,                       -- Overall position in the map (for root markers)
+  child_position INTEGER,                 -- Position within parent group (for child markers)
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -676,8 +720,66 @@ src/app/api/
 - [ ] Testing (unit, integration, E2E)
 - [ ] Documentation and deployment
 
+## Recent Updates (2025-01-20)
+
+### 🔄 Advanced Drag & Drop System Implementation
+Today's work focused on implementing a comprehensive position-based ordering system with enhanced drag behaviors:
+
+#### **Position-Based Ordering System**
+- **Database Schema**: Added `position` and `childPosition` fields to markers table
+- **Migration**: Created migration `20250720165624_add_marker_positions`
+- **API Updates**: Enhanced all marker endpoints to handle position updates
+- **Auto-assignment**: New markers automatically receive appropriate positions
+
+#### **Dual Drag Behaviors**
+1. **Drag-to-Reorder**:
+   - **Visual Feedback**: Horizontal blue insertion lines
+   - **Detection**: Mouse position relative to element middle
+   - **Scope**: Works within same parent context (root-to-root, child-to-child)
+   - **Database**: Updates position/childPosition fields accordingly
+
+2. **Drag-to-Group**:
+   - **Visual Feedback**: Blue left border highlight on target marker
+   - **Detection**: Different parent context between dragged and target markers
+   - **Scope**: Dragging individual markers onto other markers to create groups
+   - **Database**: Updates parentId and childPosition fields
+
+#### **Smart Operation Detection**
+- **Mouse Position Analysis**: `e.clientY` vs `elementMiddle` determines reorder position
+- **Parent Context Comparison**: `draggedMarker.parentId === targetMarker.parentId`
+- **Automatic Operation Type**: Sets `dragOperation` state ('reorder' vs 'group')
+- **Visual State Management**: Separate state for insertion position and target highlighting
+
+#### **Technical Implementation Details**
+- **State Management**: Added `dragInsertPosition`, `dragOperation` state variables
+- **Event Handlers**: Enhanced `handleMarkerDragOver` with position detection logic
+- **UI Components**: Insertion line components with absolute positioning
+- **CSS Integration**: Blue primary color styling for both insertion lines and grouping highlights
+- **Database Operations**: Position recalculation during grouping/ungrouping operations
+
+#### **Bug Fixes & Improvements**
+- **Screenshot Mode**: Fixed CSS-based implementation (resolved white box issues)
+- **Add Button Icon**: Fixed Material Icons display (was showing text instead of icon)
+- **Child Marker Highlighting**: Added grouping highlight support for child markers
+- **Double Nesting Prevention**: Groups (markers with children) cannot be dragged
+- **JSX Structure**: Fixed missing closing div tags in child marker rendering
+
+#### **Deployment & Testing**
+- **Build Verification**: Successful compilation with TypeScript validation
+- **Vercel CLI Deployment**: Used `npx vercel --prod` for production deployment
+- **Live Testing**: Verified both drag behaviors work correctly in production
+- **URL**: https://scout-next-gap6g0z4t-jon-humancrafteds-projects.vercel.app
+
+#### **Current Status**
+✅ **Position-based ordering fully functional**
+✅ **Dual drag behaviors implemented and tested**
+✅ **Visual feedback working for both operations**
+✅ **Database persistence confirmed**
+✅ **No breaking changes to existing functionality**
+
 ---
-*Last updated: 2025-07-20*
+*Last updated: 2025-01-20*
 *Built with Claude Code assistance*
 *Next.js migration completed successfully!*
+*Advanced drag & drop system implemented!*
 *Currently deployed with Vercel and database integration*
