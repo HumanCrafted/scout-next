@@ -1119,8 +1119,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
   return (
     <div className="relative h-screen">
       {/* Left Sidebar */}
-      {!screenshotMode && (
-        <div className="fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] flex flex-col">
+      <div className="left-sidebar fixed top-0 left-0 h-screen w-[280px] bg-white border-r border-border z-[1000] flex flex-col">
         {/* Header */}
         <div className="px-2 py-3 border-b border-border">
           <h1 className="text-lg font-semibold text-foreground ml-2">{teamName.split(' ')[0]}</h1>
@@ -1144,7 +1143,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '16px'}}>add_circle</span>
+              <span className="material-symbols-outlined" style={{fontSize: '16px'}}>add_circle</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -1281,6 +1280,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                     }
                   });
                 }
+                // Add CSS class to body for screenshot mode
+                document.body.classList.add('screenshot-mode');
+              } else {
+                // Remove CSS class from body 
+                document.body.classList.remove('screenshot-mode');
               }
               
               // Force map resize after screenshot mode change
@@ -1321,16 +1325,11 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           </button>
         </div>
       </div>
-      )}
 
       {/* Map Container */}
       <div 
         ref={mapContainer}
-        className={
-          screenshotMode 
-            ? 'absolute top-0 bottom-0 left-0 right-0 w-full h-full' 
-            : 'absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full'
-        }
+        className="map-container absolute top-0 bottom-0 left-[280px] right-0 w-[calc(100%-280px)] h-full"
         style={{ minHeight: '100vh' }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -1372,8 +1371,7 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       />
 
       {/* Bottom Controls */}
-      {!screenshotMode && (
-        <div className="fixed bottom-8 right-3 bg-white text-foreground p-3 rounded-lg text-xs font-medium z-[1000] border border-border shadow-lg flex items-center gap-3">
+      <div className="bottom-controls fixed bottom-8 right-3 bg-white text-foreground p-3 rounded-lg text-xs font-medium z-[1000] border border-border shadow-lg flex items-center gap-3">
         <div className="text-foreground">Zoom: {zoom}</div>
         <div className="flex gap-1">
           <Button
@@ -1426,11 +1424,9 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           Fit All
         </Button>
       </div>
-      )}
 
       {/* Right Pin Toolbar */}
-      {!screenshotMode && (
-        <div className="fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
+      <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
         {/* Locations */}
         <div className="mb-4">
           <h4 className="text-xs font-medium mb-2 text-muted-foreground">Locations</h4>
@@ -1602,25 +1598,25 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
           Clear
         </Button>
       </div>
-      )}
 
       {/* Screenshot Mode Exit Button */}
-      {screenshotMode && (
-        <button 
-          className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transition-colors"
-          onClick={() => {
-            setScreenshotMode(false);
-            // Force map resize when exiting screenshot mode
-            setTimeout(() => {
-              if (map.current) {
-                map.current.resize();
-              }
-            }, 50);
-          }}
-        >
-          Exit Screenshot Mode
-        </button>
-      )}
+      <button 
+        className={`fixed bottom-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transition-colors ${
+          screenshotMode ? 'block' : 'hidden'
+        }`}
+        onClick={() => {
+          setScreenshotMode(false);
+          document.body.classList.remove('screenshot-mode');
+          // Force map resize when exiting screenshot mode
+          setTimeout(() => {
+            if (map.current) {
+              map.current.resize();
+            }
+          }, 50);
+        }}
+      >
+        Exit Screenshot Mode
+      </button>
 
       {/* Edit Map Title Modal */}
       <Dialog open={isEditTitleModalOpen} onOpenChange={setIsEditTitleModalOpen}>

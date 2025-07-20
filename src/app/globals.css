@@ -136,3 +136,16 @@ mapbox-search-box input:focus {
   z-index: 10 !important;
 }
 
+/* Screenshot Mode - Hide all UI elements like v1 */
+body.screenshot-mode .left-sidebar,
+body.screenshot-mode .right-sidebar,
+body.screenshot-mode .bottom-controls {
+  display: none !important;
+}
+
+body.screenshot-mode .map-container {
+  left: 0 !important;
+  width: 100% !important;
+  right: 0 !important;
+}
+
