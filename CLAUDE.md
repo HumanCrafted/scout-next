@@ -46,7 +46,9 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - **Advanced drag behaviors**:
   - **Drag-to-reorder**: Horizontal blue insertion lines show exact placement position
   - **Drag-to-group**: Blue border highlight on target marker for grouping
-  - **Smart detection**: Mouse position automatically determines operation type
+  - **Group reordering**: Whole groups can be dragged to reorder as complete units
+  - **Smart detection**: Mouse position and marker type automatically determine operation type
+  - **Height threshold system**: 25% edge zones for reordering, center zone for grouping
 - **Position-based ordering**: Database-persisted marker positions for consistent ordering
 - Drag-off functionality to remove markers from groups
 - Visual hierarchy with left borders for grouped markers
@@ -80,8 +82,11 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - Icon-specific data persistence (deviceIcon, assetIcon fields)
 - Hierarchical marker organization with parent-child relationships
 - **Position-based ordering system**: Database fields for position tracking and drag-to-reorder
-- **Advanced drag detection**: Mouse position analysis for operation type determination
+- **Advanced drag detection**: Mouse position analysis and height threshold system (25% edge zones)
 - **Dual drag behaviors**: Distinct visual feedback for reordering vs grouping operations
+- **Group reordering**: Complete groups can be dragged and reordered as atomic units
+- **Smart operation restrictions**: Groups can only reorder, individual markers can reorder or group
+- **Child marker protection**: Only root/parent markers can accept grouping operations
 - Event-driven architecture for map interactions
 - Optimized for industrial use with clear, professional styling
 - Responsive design with fixed sidebar layout
@@ -761,19 +766,42 @@ Today's work focused on implementing a comprehensive position-based ordering sys
 - **Screenshot Mode**: Fixed CSS-based implementation (resolved white box issues)
 - **Add Button Icon**: Fixed Material Icons display (was showing text instead of icon)
 - **Child Marker Highlighting**: Added grouping highlight support for child markers
-- **Double Nesting Prevention**: Groups (markers with children) cannot be dragged
+- **Double Nesting Prevention**: Initially prevented group dragging, later enabled with restrictions
 - **JSX Structure**: Fixed missing closing div tags in child marker rendering
+- **Drag-to-Group Logic**: Fixed parent context detection (null === null issue)
+- **Child Marker Restrictions**: Prevented grouping onto child markers (only root/parent markers accept groups)
+- **Group Dragging**: Enabled whole group reordering while preventing groups from being grouped
 
 #### **Deployment & Testing**
 - **Build Verification**: Successful compilation with TypeScript validation
 - **Vercel CLI Deployment**: Used `npx vercel --prod` for production deployment
 - **Live Testing**: Verified both drag behaviors work correctly in production
-- **URL**: https://scout-next-gap6g0z4t-jon-humancrafteds-projects.vercel.app
+- **Final URL**: https://scout-next-fwp4a9v8e-jon-humancrafteds-projects.vercel.app
 
-#### **Current Status**
+#### **Iterative Improvements & Bug Fixes**
+1. **Drag-to-Group Detection Fix**:
+   - **Issue**: Root markers (parentId: null) were always treated as same parent context
+   - **Solution**: Added 25% height threshold system for operation detection
+   - **Result**: Center area triggers grouping, edge areas trigger reordering
+
+2. **Child Marker Grouping Restriction**:
+   - **Issue**: Could drag markers onto child markers to create nested groups
+   - **Solution**: Added parentId === null validation for group targets
+   - **Result**: Only root/parent markers can accept group drops
+
+3. **Group Reordering Feature**:
+   - **Issue**: Groups (markers with children) couldn't be dragged at all
+   - **Solution**: Removed drag prevention, added group-specific operation logic
+   - **Result**: Groups can be dragged to reorder as complete units
+   - **Restrictions**: Groups can only reorder, cannot be grouped with other markers
+
+#### **Final Feature Set**
 ✅ **Position-based ordering fully functional**
-✅ **Dual drag behaviors implemented and tested**
-✅ **Visual feedback working for both operations**
+✅ **Dual drag behaviors with proper detection logic**
+✅ **Height threshold system for intuitive operation selection**
+✅ **Child marker protection from grouping operations**
+✅ **Group reordering as complete units**
+✅ **Visual feedback working for all operations**
 ✅ **Database persistence confirmed**
 ✅ **No breaking changes to existing functionality**
 
