@@ -1283,12 +1283,12 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
                 }
               }
               
-              // Force map resize after screenshot mode change
+              // Force map resize after screenshot mode change with longer delay
               setTimeout(() => {
                 if (map.current) {
                   map.current.resize();
                 }
-              }, 50);
+              }, 100);
             }}
           >
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
@@ -1329,11 +1329,18 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
         className={`absolute top-0 bottom-0 h-full ${
           screenshotMode 
             ? 'left-0 right-0 w-full' 
-            : 'left-[280px] right-[95px] w-[calc(100%-375px)]'
+            : 'left-[280px] right-0'
         }`}
         style={{ 
           minHeight: '100vh',
-          ...(screenshotMode ? { width: '100vw', height: '100vh' } : {})
+          ...(screenshotMode ? { 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw', 
+            height: '100vh',
+            zIndex: 1500
+          } : {})
         }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -1611,7 +1618,15 @@ export default function MapContainer({ teamName, onLogout }: MapContainerProps) 
       {screenshotMode && (
         <button 
           className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transition-colors"
-          onClick={() => setScreenshotMode(false)}
+          onClick={() => {
+            setScreenshotMode(false);
+            // Force map resize when exiting screenshot mode
+            setTimeout(() => {
+              if (map.current) {
+                map.current.resize();
+              }
+            }, 100);
+          }}
         >
           Exit Screenshot Mode
         </button>
