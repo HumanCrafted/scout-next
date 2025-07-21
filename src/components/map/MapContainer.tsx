@@ -43,6 +43,7 @@ interface MarkerCategory {
   id: string;
   name: string;
   displayOrder: number;
+  isVisible: boolean;
   icons?: CategoryIcon[];
 }
 
@@ -2085,12 +2086,15 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
             Loading...
           </div>
-        ) : markerCategories.length === 0 ? (
+        ) : markerCategories.filter(category => category.isVisible).length === 0 ? (
           <div className="text-center text-xs text-muted-foreground p-2">
-            No categories configured. Add categories in Settings.
+            {markerCategories.length === 0 
+              ? "No categories configured. Add categories in Settings."
+              : "All categories hidden. Toggle visibility in Settings."
+            }
           </div>
         ) : (
-          markerCategories.map((category) => {
+          markerCategories.filter(category => category.isVisible).map((category) => {
             // Get background color class for icons
             const getBgClass = (bgColor: string) => {
               switch (bgColor) {

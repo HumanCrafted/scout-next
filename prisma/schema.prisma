@@ -97,6 +97,7 @@ model MarkerCategory {
   teamId       String
   name         String   // Category name like "Areas", "Devices", "Assets", etc.
   displayOrder Int      @default(0) // Order in toolbar
+  isVisible    Boolean  @default(true) // Whether category shows in toolbar
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

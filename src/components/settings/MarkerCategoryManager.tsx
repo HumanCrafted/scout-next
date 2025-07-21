@@ -25,6 +25,7 @@ interface MarkerCategory {
   id: string;
   name: string;
   displayOrder: number;
+  isVisible: boolean;
   icons: CategoryIcon[];
 }
 
@@ -75,7 +76,6 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [editIconBackground, setEditIconBackground] = useState('light');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
-  const [areasVisible, setAreasVisible] = useState(true);
 
   useEffect(() => {
     loadCategories();
@@ -239,6 +239,27 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
     setIsEditIconOpen(true);
   };
 
+  const toggleCategoryVisibility = async (categoryId: string, currentVisibility: boolean) => {
+    try {
+      const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}/visibility`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isVisible: !currentVisibility
+        }),
+      });
+
+      if (response.ok) {
+        await loadCategories(); // Reload categories to get updated state
+      } else {
+        const error = await response.json();
+        console.error('Failed to update category visibility:', error.message);
+      }
+    } catch (error) {
+      console.error('Error updating category visibility:', error);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -274,8 +295,8 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                           <Label htmlFor={`areas-toggle-${category.id}`} className="text-sm">Show in toolbar</Label>
                           <Switch 
                             id={`areas-toggle-${category.id}`}
-                            checked={areasVisible}
-                            onCheckedChange={setAreasVisible}
+                            checked={category.isVisible}
+                            onCheckedChange={() => toggleCategoryVisibility(category.id, category.isVisible)}
                           />
                         </div>
                       ) : (
