@@ -889,10 +889,77 @@ Major restructuring to implement fully customizable marker categories as request
 ✅ **Auto-numbering system** - Smart category-aware numbering
 ✅ **Professional settings interface** - Complete team control
 
+## Bug Fixes & Improvements (2025-01-21)
+
+### 🔧 Critical Bug Fixes - User Feedback Response
+Based on user testing feedback, addressed 6 major issues with the custom marker category system:
+
+#### **1. Marker Icons Disappearing on Page Refresh** ✅
+- **Issue**: New markers showed labels but no visual icons after page refresh/navigation
+- **Root Cause**: `renderExistingMarkers` function using old hardcoded type system instead of categoryIcon data
+- **Solution**: 
+  - Updated Marker interface to include `category` and `categoryIcon` relations
+  - Modified `renderExistingMarkers` to use `marker.categoryIcon` for styling
+  - Added fallback logic for legacy markers without categoryIcon data
+  - Fixed both map markers and sidebar icon display
+- **Result**: All marker icons now persist correctly across page refreshes
+
+#### **2. Removed Unnecessary Numbered Option** ✅  
+- **Issue**: "Show numbers (1-10)" option appeared when creating regular icons
+- **Intended**: Only Areas category should use numbered markers
+- **Solution**: 
+  - Removed Switch component and isNumbered state from icon creation dialog
+  - Hardcoded `isNumbered: false` for all regular icon creation
+  - Removed "Numbered" column from icons table display
+- **Result**: Cleaner UI, numbered markers only for Areas as intended
+
+#### **3. Fixed Dropdown Scrolling Issue** ✅
+- **Issue**: Material Icons picker couldn't scroll with mouse wheel, only scrollbar drag
+- **Root Cause**: shadcn/ui Command component missing proper scroll handling
+- **Solution**: Added `className="max-h-60 overflow-y-auto"` to CommandList
+- **Result**: Mouse wheel scrolling now works perfectly in icon picker
+
+#### **4. Areas as Default Immutable Category** ✅
+- **Issue**: Teams could delete the Areas category, breaking numbered zone functionality
+- **Solution**: 
+  - **API Auto-Creation**: Teams with no categories automatically get "Areas" with 10 numbered icons
+  - **UI Protection**: Delete button hidden for Areas category in settings
+  - **Backend Protection**: DELETE endpoint returns 400 error for Areas category
+  - **Default Icons**: Auto-created Area 1-10 icons with dark background and `location_on` icon
+- **Result**: Every team guaranteed to have Areas category with numbered zones
+
+#### **5. Added Full Icon Edit Functionality** ✅
+- **Issue**: No way to modify existing icons after creation
+- **Implementation**:
+  - **New UI**: Edit button for each icon in settings table
+  - **Edit Dialog**: Full interface to modify name, Material icon, and background color
+  - **API Integration**: Uses existing PUT endpoint for icon updates
+  - **State Management**: Separate edit state variables and picker for editing
+  - **Validation**: Name uniqueness checking within category
+- **Result**: Complete CRUD operations for icon management
+
+#### **6. Auto-save UX Clarification** ⏸️
+- **Issue**: "Save Changes" button immediately greys out, confusing users about save status
+- **Analysis**: System actually auto-saves changes immediately, button state is correct
+- **Status**: Low priority UX improvement for future consideration
+
+### 🛠 Technical Improvements
+- **Error Handling**: Better error messages for all CRUD operations
+- **Code Organization**: Separated create/edit state management for cleaner code
+- **Build Validation**: All changes pass TypeScript compilation and build process
+- **API Robustness**: Enhanced validation and error responses
+
+### 📊 System Status After Fixes
+- ✅ **Marker persistence**: Icons display correctly across all app states
+- ✅ **Category management**: Full CRUD with proper defaults and restrictions  
+- ✅ **Icon management**: Complete edit capabilities with intuitive UI
+- ✅ **User experience**: Smoother interactions and expected behaviors
+- ✅ **Data integrity**: Protected default categories and proper validation
+
 ---
 *Last updated: 2025-01-21*
 *Built with Claude Code assistance*
 *Next.js migration completed successfully!*
 *Advanced drag & drop system implemented!*
-*Custom marker category system implemented!*
+*Custom marker category system with comprehensive bug fixes!*
 *Currently deployed with Vercel and database integration*

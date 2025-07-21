@@ -32,6 +32,55 @@ export async function GET(
       );
     }
 
+    // If team has no categories, create default "Areas" category
+    if (team.markerCategories.length === 0) {
+      const defaultCategory = await prisma.markerCategory.create({
+        data: {
+          teamId: team.id,
+          name: 'Areas',
+          displayOrder: 0,
+        },
+        include: {
+          icons: {
+            orderBy: { displayOrder: 'asc' }
+          }
+        }
+      });
+
+      // Create default numbered icons for Areas (1-10)
+      for (let i = 1; i <= 10; i++) {
+        await prisma.categoryIcon.create({
+          data: {
+            categoryId: defaultCategory.id,
+            name: `Area ${i}`,
+            icon: 'location_on',
+            backgroundColor: 'dark',
+            isNumbered: true,
+            displayOrder: i - 1,
+          }
+        });
+      }
+
+      // Refetch the team with the new category and icons
+      const updatedTeam = await prisma.team.findUnique({
+        where: { name: teamName },
+        include: {
+          markerCategories: {
+            orderBy: { displayOrder: 'asc' },
+            include: {
+              icons: {
+                orderBy: { displayOrder: 'asc' }
+              }
+            }
+          }
+        }
+      });
+
+      return NextResponse.json({
+        categories: updatedTeam?.markerCategories || []
+      });
+    }
+
     return NextResponse.json({
       categories: team.markerCategories
     });

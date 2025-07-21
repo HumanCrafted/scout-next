@@ -18,6 +18,8 @@ interface Marker {
   type: string;
   categoryId?: string | null;
   categoryIconId?: string | null;
+  category?: MarkerCategory | null;
+  categoryIcon?: CategoryIcon | null;
   zoneNumber?: number;
   deviceIcon?: string;
   assetIcon?: string;
@@ -342,34 +344,66 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
       `;
       
-      // Set background color and content based on type
+      // Set background color and content based on category icon
       if (marker.type === 'search') {
         // Search result pin - use location_on icon like v1
         el.style.backgroundColor = 'rgb(243, 243, 243)';
         el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
         el.innerHTML = '<span class="material-icons" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
-      } else if (marker.type === 'location') {
-        el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
-        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-        el.style.color = 'hsl(210 40% 98%)';
-        el.textContent = marker.zoneNumber?.toString() || 'L';
-      } else if (marker.type === 'device') {
-        el.style.backgroundColor = 'rgb(243, 243, 243)';
-        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-        const icon = marker.deviceIcon || 'memory';
+      } else if (marker.categoryIcon) {
+        // Use categoryIcon data for styling
+        const categoryIcon = marker.categoryIcon;
         
-        if (icon === 'solar-panel') {
-          el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
-            <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
-          </svg>`;
+        if (categoryIcon.backgroundColor === 'dark') {
+          el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          el.style.color = 'hsl(210 40% 98%)';
+          
+          // Check if this is a numbered marker (contains number in label)
+          const numberMatch = marker.label.match(/(\d+)$/);
+          if (numberMatch && categoryIcon.isNumbered) {
+            el.textContent = numberMatch[1];
+          } else {
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${categoryIcon.icon}</span>`;
+          }
         } else {
+          // Light background
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          
+          if (categoryIcon.icon === 'solar-panel') {
+            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
+              <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+            </svg>`;
+          } else {
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${categoryIcon.icon}</span>`;
+          }
+        }
+      } else {
+        // Fallback for legacy markers without categoryIcon
+        if (marker.type === 'location') {
+          el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          el.style.color = 'hsl(210 40% 98%)';
+          el.textContent = marker.zoneNumber?.toString() || 'L';
+        } else if (marker.type === 'device') {
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          const icon = marker.deviceIcon || 'memory';
+          
+          if (icon === 'solar-panel') {
+            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
+              <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+            </svg>`;
+          } else {
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+          }
+        } else if (marker.type === 'assets') {
+          el.style.backgroundColor = 'rgb(243, 243, 243)';
+          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+          const icon = marker.assetIcon || 'build';
           el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
-      } else if (marker.type === 'assets') {
-        el.style.backgroundColor = 'rgb(243, 243, 243)';
-        el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-        const icon = marker.assetIcon || 'build';
-        el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
       }
       
       // Create popup with slot styling - marker sits inside left rounded end
@@ -1712,6 +1746,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                 )}
                                 <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
                                   {marker.type === 'search' ? 'place' : 
+                                   marker.categoryIcon ? marker.categoryIcon.icon :
                                    marker.type === 'location' ? 'location_on' :
                                    marker.type === 'device' ? 'memory' : 'build'}
                                 </span>
@@ -1788,6 +1823,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                     <div className="flex items-center flex-1 min-w-0">
                                       <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
                                         {childMarker.type === 'search' ? 'place' : 
+                                         childMarker.categoryIcon ? childMarker.categoryIcon.icon :
                                          childMarker.type === 'location' ? 'location_on' :
                                          childMarker.type === 'device' ? 'memory' : 'build'}
                                       </span>

@@ -122,6 +122,14 @@ export async function DELETE(
       );
     }
 
+    // Prevent deletion of the default "Areas" category
+    if (category.name === 'Areas') {
+      return NextResponse.json(
+        { message: 'Cannot delete the default Areas category' },
+        { status: 400 }
+      );
+    }
+
     // Delete the category (markers using this category will have categoryId set to null due to onDelete: SetNull)
     await prisma.markerCategory.delete({
       where: { id: categoryId }

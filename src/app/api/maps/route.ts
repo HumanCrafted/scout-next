@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
         maps: {
           include: {
             markers: {
+              include: {
+                category: true,
+                categoryIcon: true
+              },
               orderBy: [
                 { position: 'asc' },
                 { childPosition: 'asc' },

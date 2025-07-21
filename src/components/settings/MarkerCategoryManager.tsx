@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Switch } from '@/components/ui/switch';
 
 interface CategoryIcon {
   id: string;
@@ -63,13 +62,18 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [categories, setCategories] = useState<MarkerCategory[]>([]);
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [isCreateIconOpen, setIsCreateIconOpen] = useState(false);
+  const [isEditIconOpen, setIsEditIconOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [editingIcon, setEditingIcon] = useState<CategoryIcon | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newIconName, setNewIconName] = useState('');
   const [newIconIcon, setNewIconIcon] = useState('');
   const [newIconBackground, setNewIconBackground] = useState('light');
-  const [newIconIsNumbered, setNewIconIsNumbered] = useState(false);
+  const [editIconName, setEditIconName] = useState('');
+  const [editIconIcon, setEditIconIcon] = useState('');
+  const [editIconBackground, setEditIconBackground] = useState('light');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+  const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -125,7 +129,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
           name: newIconName.trim(),
           icon: newIconIcon,
           backgroundColor: newIconBackground,
-          isNumbered: newIconIsNumbered,
+          isNumbered: false, // Always false for regular icons
           displayOrder: 0
         }),
       });
@@ -136,7 +140,6 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         setNewIconName('');
         setNewIconIcon('');
         setNewIconBackground('light');
-        setNewIconIsNumbered(false);
         setSelectedCategoryId(null);
       } else {
         const error = await response.json();
@@ -168,6 +171,38 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
     }
   };
 
+  const editIcon = async () => {
+    if (!editIconName.trim() || !editIconIcon || !editingIcon) return;
+
+    try {
+      const response = await fetch(`/api/teams/${teamSlug}/categories/${selectedCategoryId}/icons/${editingIcon.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editIconName.trim(),
+          icon: editIconIcon,
+          backgroundColor: editIconBackground,
+          isNumbered: editingIcon.isNumbered // Keep the original isNumbered value
+        }),
+      });
+
+      if (response.ok) {
+        await loadCategories();
+        setIsEditIconOpen(false);
+        setEditingIcon(null);
+        setEditIconName('');
+        setEditIconIcon('');
+        setEditIconBackground('light');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to update icon');
+      }
+    } catch (error) {
+      console.error('Error updating icon:', error);
+      alert('Error updating icon');
+    }
+  };
+
   const deleteIcon = async (categoryId: string, iconId: string) => {
     if (!confirm('Are you sure you want to delete this icon?')) return;
 
@@ -191,6 +226,15 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const openCreateIcon = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
     setIsCreateIconOpen(true);
+  };
+
+  const openEditIcon = (categoryId: string, icon: CategoryIcon) => {
+    setSelectedCategoryId(categoryId);
+    setEditingIcon(icon);
+    setEditIconName(icon.name);
+    setEditIconIcon(icon.icon);
+    setEditIconBackground(icon.backgroundColor);
+    setIsEditIconOpen(true);
   };
 
   return (
@@ -231,13 +275,15 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                         <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
                         Add Icon
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => deleteCategory(category.id)}
-                      >
-                        <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
-                      </Button>
+                      {category.name !== 'Areas' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => deleteCategory(category.id)}
+                        >
+                          <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -251,7 +297,6 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                           <TableHead>Icon</TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Background</TableHead>
-                          <TableHead>Numbered</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -277,16 +322,22 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                               <span className="capitalize">{icon.backgroundColor}</span>
                             </TableCell>
                             <TableCell>
-                              {icon.isNumbered ? 'Yes' : 'No'}
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => deleteIcon(category.id, icon.id)}
-                              >
-                                <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => openEditIcon(category.id, icon)}
+                                >
+                                  <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => deleteIcon(category.id, icon.id)}
+                                >
+                                  <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -368,7 +419,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                   <PopoverContent className="w-80 p-0">
                     <Command>
                       <CommandInput placeholder="Search icons..." />
-                      <CommandList>
+                      <CommandList className="max-h-60 overflow-y-auto">
                         <CommandEmpty>No icons found.</CommandEmpty>
                         <CommandGroup>
                           {MATERIAL_ICONS.map((icon) => (
@@ -415,17 +466,6 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                 </Select>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is-numbered"
-                  checked={newIconIsNumbered}
-                  onCheckedChange={setNewIconIsNumbered}
-                />
-                <Label htmlFor="is-numbered">Show numbers (1-10)</Label>
-                <p className="text-xs text-muted-foreground">
-                  For area markers that need numbers like &quot;Area 1&quot;, &quot;Area 2&quot;, etc.
-                </p>
-              </div>
             </div>
             
             <DialogFooter>
@@ -434,6 +474,102 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
               </Button>
               <Button onClick={createIcon}>
                 Add Icon
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Icon Dialog */}
+        <Dialog open={isEditIconOpen} onOpenChange={setIsEditIconOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Icon</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-icon-name">Icon Name</Label>
+                <Input
+                  id="edit-icon-name"
+                  value={editIconName}
+                  onChange={(e) => setEditIconName(e.target.value)}
+                  placeholder="e.g., Sensor, Router, Building"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Material Icon</Label>
+                <Popover open={isEditIconPickerOpen} onOpenChange={setIsEditIconPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <div className="flex items-center gap-2">
+                        {editIconIcon && (
+                          <span className="material-icons" style={{fontSize: '16px'}}>
+                            {editIconIcon}
+                          </span>
+                        )}
+                        <span>{editIconIcon || 'Select an icon'}</span>
+                      </div>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0">
+                    <Command>
+                      <CommandInput placeholder="Search icons..." />
+                      <CommandList className="max-h-60 overflow-y-auto">
+                        <CommandEmpty>No icons found.</CommandEmpty>
+                        <CommandGroup>
+                          {MATERIAL_ICONS.map((icon) => (
+                            <CommandItem
+                              key={icon}
+                              value={icon}
+                              onSelect={() => {
+                                setEditIconIcon(icon);
+                                setIsEditIconPickerOpen(false);
+                              }}
+                            >
+                              <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                                {icon}
+                              </span>
+                              {icon}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-icon-background">Background Color</Label>
+                <Select value={editIconBackground} onValueChange={setEditIconBackground}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BACKGROUND_COLORS.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border" 
+                            style={{ backgroundColor: color.preview }}
+                          />
+                          {color.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditIconOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={editIcon}>
+                Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
