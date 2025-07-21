@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import MarkerCategoryManager from './MarkerCategoryManager';
 
 interface SettingsData {
@@ -55,6 +56,7 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     // Load current team data and settings
@@ -193,9 +195,10 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
   };
 
   const handleLogout = async () => {
-    const confirmLogout = confirm('Are you sure you want to logout? You will need to re-enter the team password.');
-    
-    if (confirmLogout) {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const performLogout = async () => {
       try {
         // Call logout API
         await fetch('/api/auth/logout', {
@@ -213,7 +216,6 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
         localStorage.removeItem('scout-team');
         window.location.href = '/';
       }
-    }
   };
 
   return (
@@ -503,6 +505,30 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to logout? You will need to re-enter the team password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                performLogout();
+                setIsLogoutConfirmOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

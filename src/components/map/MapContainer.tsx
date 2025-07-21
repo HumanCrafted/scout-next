@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getCurrentTeam } from '@/lib/auth';
 
 
@@ -76,6 +77,23 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const [editMarkerName, setEditMarkerName] = useState('');
   const [editMarkerLat, setEditMarkerLat] = useState('');
   const [editMarkerLng, setEditMarkerLng] = useState('');
+
+  // Alert and confirmation dialog state
+  const [alertDialog, setAlertDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    type: 'error' | 'success' | 'warning';
+  }>({ isOpen: false, title: '', description: '', type: 'error' });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({ isOpen: false, title: '', description: '', onConfirm: () => {}, confirmText: 'Confirm', cancelText: 'Cancel' });
   
   // Multi-map state
   const [maps, setMaps] = useState<{id: string, title: string, markers: Marker[], isActive: boolean}[]>([]);
@@ -101,6 +119,28 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   // Get current team - memoize to prevent unnecessary re-renders
   const currentTeam = useMemo(() => getCurrentTeam(), []);
   const teamSlug = currentTeam?.name || 'masen'; // Fallback to masen for now
+
+  // Helper functions for dialogs
+  const showAlert = (title: string, description: string, type: 'error' | 'success' | 'warning' = 'error') => {
+    setAlertDialog({ isOpen: true, title, description, type });
+  };
+
+  const showConfirm = (
+    title: string, 
+    description: string, 
+    onConfirm: () => void,
+    confirmText: string = 'Confirm',
+    cancelText: string = 'Cancel'
+  ) => {
+    setConfirmDialog({ 
+      isOpen: true, 
+      title, 
+      description, 
+      onConfirm, 
+      confirmText, 
+      cancelText 
+    });
+  };
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -557,11 +597,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         
         await addMarkerToMap(lng, lat, placeName, 'search');
       } else {
-        alert('No results found for: ' + query);
+        showAlert('No Results', 'No results found for: ' + query, 'warning');
       }
     } catch (error) {
       console.error('Geocoding search error:', error);
-      alert('Search failed. Please try again.');
+      showAlert('Search Failed', 'Search failed. Please try again.');
     }
   };
 
@@ -634,13 +674,16 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const clearMarkers = async () => {
     if (markers.length === 0) return;
     
-    const confirmClear = confirm(
-      `You have ${markers.length} marker(s) currently placed.\n\n` +
-      'Clearing will permanently remove all markers and groups.\n\n' +
-      'Do you want to continue?'
+    showConfirm(
+      'Clear All Markers',
+      `You have ${markers.length} marker(s) currently placed.\n\nClearing will permanently remove all markers and groups.\n\nDo you want to continue?`,
+      () => performClearMarkers(),
+      'Clear All',
+      'Cancel'
     );
-    
-    if (confirmClear) {
+  };
+
+  const performClearMarkers = async () => {
       try {
         // Delete all markers from database
         for (const marker of markers) {
@@ -655,9 +698,8 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         setMarkers([]);
       } catch (error) {
         console.error('Error clearing markers:', error);
-        alert('Error clearing markers. Please try again.');
+        showAlert('Error', 'Error clearing markers. Please try again.');
       }
-    }
   };
 
   // Delete a map
@@ -665,13 +707,18 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     const mapToDelete = maps.find(m => m.id === mapId);
     if (!mapToDelete) return;
 
-    const confirmDelete = confirm(
-      `Are you sure you want to delete "${mapToDelete.title}"?\n\n` +
-      `This will permanently remove the map and all ${mapToDelete.markers.length} marker(s).\n\n` +
-      'This action cannot be undone.'
+    showConfirm(
+      'Delete Map',
+      `Are you sure you want to delete "${mapToDelete.title}"?\n\nThis will permanently remove the map and all ${mapToDelete.markers.length} marker(s).\n\nThis action cannot be undone.`,
+      () => performDeleteMap(mapId),
+      'Delete Map',
+      'Cancel'
     );
+  };
 
-    if (!confirmDelete) return;
+  const performDeleteMap = async (mapId: string) => {
+    const mapToDelete = maps.find(m => m.id === mapId);
+    if (!mapToDelete) return;
 
     try {
       const response = await fetch(`/api/maps/${mapId}`, {
@@ -711,11 +758,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         }
       } else {
         console.error('Failed to delete map:', response.status);
-        alert('Failed to delete map. Please try again.');
+        showAlert('Failed to Delete Map', 'Failed to delete map. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting map:', error);
-      alert('Error deleting map. Please try again.');
+      showAlert('Error', 'Error deleting map. Please try again.');
     }
   };
 
@@ -817,11 +864,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         }
       } else {
         console.error('Failed to create new map:', response.status);
-        alert('Failed to create new map. Please try again.');
+        showAlert('Failed to Create Map', 'Failed to create new map. Please try again.');
       }
     } catch (error) {
       console.error('Error creating new map:', error);
-      alert('Error creating new map. Please try again.');
+      showAlert('Error', 'Error creating new map. Please try again.');
     }
   };
 
@@ -833,14 +880,23 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       const children = getChildMarkers(markers, markerId);
       
       if (children.length > 0) {
-        const confirmDelete = confirm(
-          `This marker has ${children.length} child marker(s).\n\n` +
-          'Deleting the parent will make all child markers independent.\n\n' +
-          'Do you want to continue?'
+        showConfirm(
+          'Delete Parent Marker',
+          `This marker has ${children.length} child marker(s).\n\nDeleting the parent will make all child markers independent.\n\nDo you want to continue?`,
+          () => performDeleteMarker(markerId),
+          'Delete',
+          'Cancel'
         );
-        
-        if (!confirmDelete) return;
+        return;
       }
+      
+      await performDeleteMarker(markerId);
+  };
+
+  const performDeleteMarker = async (markerId: string) => {
+    try {
+      const markerToDelete = markers.find(m => m.id === markerId);
+      const children = getChildMarkers(markers, markerId);
 
       const response = await fetch(`/api/markers/${markerId}`, {
         method: 'DELETE',
@@ -898,11 +954,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         }
       } else {
         console.error('Failed to delete marker:', response.status);
-        alert('Failed to delete marker. Please try again.');
+        showAlert('Failed to Delete Marker', 'Failed to delete marker. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting marker:', error);
-      alert('Error deleting marker. Please try again.');
+      showAlert('Error', 'Error deleting marker. Please try again.');
     }
   };
 
@@ -941,11 +997,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           setIsEditTitleModalOpen(false);
         } else {
           console.error('Failed to update map title:', response.status);
-          alert('Failed to update map title. Please try again.');
+          showAlert('Failed to Update Title', 'Failed to update map title. Please try again.');
         }
       } catch (error) {
         console.error('Error updating map title:', error);
-        alert('Error updating map title. Please try again.');
+        showAlert('Error', 'Error updating map title. Please try again.');
       }
     }
   };
@@ -997,11 +1053,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         }
       } else {
         console.error('Failed to toggle marker lock:', response.status);
-        alert('Failed to toggle marker lock. Please try again.');
+        showAlert('Failed to Toggle Lock', 'Failed to toggle marker lock. Please try again.');
       }
     } catch (error) {
       console.error('Error toggling marker lock:', error);
-      alert('Error toggling marker lock. Please try again.');
+      showAlert('Error', 'Error toggling marker lock. Please try again.');
     }
   };
 
@@ -1022,7 +1078,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     const lng = parseFloat(editMarkerLng);
     
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      alert('Please enter valid coordinates (lat: -90 to 90, lng: -180 to 180)');
+      showAlert('Invalid Coordinates', 'Please enter valid coordinates (lat: -90 to 90, lng: -180 to 180)', 'warning');
       return;
     }
 
@@ -1090,11 +1146,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         setEditingMarker(null);
       } else {
         console.error('Failed to update marker:', response.status);
-        alert('Failed to update marker. Please try again.');
+        showAlert('Failed to Update Marker', 'Failed to update marker. Please try again.');
       }
     } catch (error) {
       console.error('Error updating marker:', error);
-      alert('Error updating marker. Please try again.');
+      showAlert('Error', 'Error updating marker. Please try again.');
     }
   };
 
@@ -2313,6 +2369,51 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Alert Dialog */}
+      <AlertDialog open={alertDialog.isOpen} onOpenChange={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className={alertDialog.type === 'error' ? 'text-destructive' : alertDialog.type === 'warning' ? 'text-orange-600' : 'text-green-600'}>
+              {alertDialog.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {alertDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.isOpen} onOpenChange={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+              {confirmDialog.cancelText}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                confirmDialog.onConfirm();
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {confirmDialog.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

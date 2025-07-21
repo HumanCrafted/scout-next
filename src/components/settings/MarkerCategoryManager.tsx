@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface CategoryIcon {
   id: string;
@@ -61,9 +62,48 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [editingCategory, setEditingCategory] = useState<MarkerCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
 
+  // Alert and confirmation dialog state
+  const [alertDialog, setAlertDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    type: 'error' | 'success' | 'warning';
+  }>({ isOpen: false, title: '', description: '', type: 'error' });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({ isOpen: false, title: '', description: '', onConfirm: () => {}, confirmText: 'Confirm', cancelText: 'Cancel' });
+
   useEffect(() => {
     loadCategories();
   }, [teamSlug]);
+
+  // Helper functions for dialogs
+  const showAlert = (title: string, description: string, type: 'error' | 'success' | 'warning' = 'error') => {
+    setAlertDialog({ isOpen: true, title, description, type });
+  };
+
+  const showConfirm = (
+    title: string, 
+    description: string, 
+    onConfirm: () => void,
+    confirmText: string = 'Confirm',
+    cancelText: string = 'Cancel'
+  ) => {
+    setConfirmDialog({ 
+      isOpen: true, 
+      title, 
+      description, 
+      onConfirm, 
+      confirmText, 
+      cancelText 
+    });
+  };
 
   const loadCategories = async () => {
     try {
@@ -96,11 +136,11 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         setNewCategoryName('');
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to create category');
+        showAlert('Failed to Create Category', error.message || 'Failed to create category');
       }
     } catch (error) {
       console.error('Error creating category:', error);
-      alert('Error creating category');
+      showAlert('Error', 'Error creating category');
     }
   };
 
@@ -129,11 +169,11 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         setSelectedCategoryId(null);
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to create icon');
+        showAlert('Failed to Create Icon', error.message || 'Failed to create icon');
       }
     } catch (error) {
       console.error('Error creating icon:', error);
-      alert('Error creating icon');
+      showAlert('Error', 'Error creating icon');
     }
   };
 
@@ -141,7 +181,16 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
     const category = categories.find(cat => cat.id === categoryId);
     const categoryName = category?.name || 'this category';
     
-    if (!confirm(`Are you sure you want to delete "${categoryName}"? All icons within it will also be removed.`)) return;
+    showConfirm(
+      'Delete Category',
+      `Are you sure you want to delete "${categoryName}"? All icons within it will also be removed.`,
+      () => performDeleteCategory(categoryId),
+      'Delete',
+      'Cancel'
+    );
+  };
+
+  const performDeleteCategory = async (categoryId: string) => {
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}`, {
@@ -158,14 +207,18 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
           const markerList = error.markersInUse.slice(0, 5).join(', ');
           const additionalCount = error.markersInUse.length > 5 ? ` (and ${error.markersInUse.length - 5} more)` : '';
           
-          alert(`${error.message}\n\nMarkers using this category: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the category again.`);
+          showAlert(
+            'Cannot Delete Category', 
+            `${error.message}\n\nMarkers using this category: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the category again.`,
+            'warning'
+          );
         } else {
-          alert(error.message || 'Failed to delete category');
+          showAlert('Failed to Delete Category', error.message || 'Failed to delete category');
         }
       }
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Error deleting category');
+      showAlert('Error', 'Error deleting category');
     }
   };
 
@@ -193,11 +246,11 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         setEditIconBackground('light');
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to update icon');
+        showAlert('Failed to Update Icon', error.message || 'Failed to update icon');
       }
     } catch (error) {
       console.error('Error updating icon:', error);
-      alert('Error updating icon');
+      showAlert('Error', 'Error updating icon');
     }
   };
 
@@ -206,7 +259,16 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
     const icon = category?.icons?.find(ic => ic.id === iconId);
     const iconName = icon?.name || 'this icon';
     
-    if (!confirm(`Are you sure you want to delete "${iconName}"?`)) return;
+    showConfirm(
+      'Delete Icon',
+      `Are you sure you want to delete "${iconName}"?`,
+      () => performDeleteIcon(categoryId, iconId),
+      'Delete',
+      'Cancel'
+    );
+  };
+
+  const performDeleteIcon = async (categoryId: string, iconId: string) => {
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}/icons/${iconId}`, {
@@ -223,14 +285,18 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
           const markerList = error.markersInUse.slice(0, 5).join(', ');
           const additionalCount = error.markersInUse.length > 5 ? ` (and ${error.markersInUse.length - 5} more)` : '';
           
-          alert(`${error.message}\n\nMarkers using this icon: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the icon again.`);
+          showAlert(
+            'Cannot Delete Icon',
+            `${error.message}\n\nMarkers using this icon: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the icon again.`,
+            'warning'
+          );
         } else {
-          alert(error.message || 'Failed to delete icon');
+          showAlert('Failed to Delete Icon', error.message || 'Failed to delete icon');
         }
       }
     } catch (error) {
       console.error('Error deleting icon:', error);
-      alert('Error deleting icon');
+      showAlert('Error', 'Error deleting icon');
     }
   };
 
@@ -294,11 +360,11 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         setEditCategoryName('');
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to update category name');
+        showAlert('Failed to Update Category', error.message || 'Failed to update category name');
       }
     } catch (error) {
       console.error('Error updating category name:', error);
-      alert('Error updating category name');
+      showAlert('Error', 'Error updating category name');
     }
   };
 
@@ -703,6 +769,51 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Alert Dialog */}
+        <AlertDialog open={alertDialog.isOpen} onOpenChange={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className={alertDialog.type === 'error' ? 'text-destructive' : alertDialog.type === 'warning' ? 'text-orange-600' : 'text-green-600'}>
+                {alertDialog.title}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="whitespace-pre-line">
+                {alertDialog.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}>
+                OK
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={confirmDialog.isOpen} onOpenChange={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription className="whitespace-pre-line">
+                {confirmDialog.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+                {confirmDialog.cancelText}
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {confirmDialog.confirmText}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
