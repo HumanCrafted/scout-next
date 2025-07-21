@@ -57,6 +57,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const map = useRef<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [markerCategories, setMarkerCategories] = useState<MarkerCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [mapId, setMapId] = useState<string | null>(null);
   const [mapTitle, setMapTitle] = useState('Untitled Map');
   const [zoom, setZoom] = useState(4.2);
@@ -212,6 +213,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     if (!teamSlug) return;
 
     try {
+      setCategoriesLoading(true);
       const response = await fetch(`/api/teams/${teamSlug}/categories`);
       if (response.ok) {
         const data = await response.json();
@@ -219,18 +221,20 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       }
     } catch (error) {
       console.error('Error loading marker categories:', error);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
-  // Get next auto-number for an icon type
-  const getNextCategoryNumber = (iconName: string): number => {
+  // Get next auto-number for a category
+  const getNextCategoryNumber = (categoryName: string): number => {
     const existingMarkers = markers.filter(marker => 
-      marker.label.toLowerCase().startsWith(iconName.toLowerCase())
+      marker.label.toLowerCase().startsWith(categoryName.toLowerCase())
     );
     
     let maxNumber = 0;
     existingMarkers.forEach(marker => {
-      const match = marker.label.match(new RegExp(`^${iconName}\\s+(\\d+)$`, 'i'));
+      const match = marker.label.match(new RegExp(`^${categoryName}\\s+(\\d+)$`, 'i'));
       if (match) {
         const num = parseInt(match[1]);
         if (num > maxNumber) {
@@ -1999,12 +2003,12 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           // Generate label with auto-numbering
           let label;
           if (draggedPinType.zoneNumber) {
-            // For numbered icons (1-10)
-            label = `${draggedPinType.iconName} ${draggedPinType.zoneNumber}`;
+            // For numbered icons (1-10) - use category name
+            label = `${draggedPinType.categoryName} ${draggedPinType.zoneNumber}`;
           } else {
-            // For regular icons, auto-number them
-            const nextNumber = getNextCategoryNumber(draggedPinType.iconName);
-            label = `${draggedPinType.iconName} ${nextNumber}`;
+            // For regular icons, auto-number them by category
+            const nextNumber = getNextCategoryNumber(draggedPinType.categoryName);
+            label = `${draggedPinType.categoryName} ${nextNumber}`;
           }
           
           addMarkerToMap(
@@ -2076,7 +2080,12 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
 
       {/* Right Pin Toolbar - Dynamic Categories with Icons */}
       <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
-        {markerCategories.length === 0 ? (
+        {categoriesLoading ? (
+          <div className="text-center text-xs text-muted-foreground p-2">
+            <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
+            Loading...
+          </div>
+        ) : markerCategories.length === 0 ? (
           <div className="text-center text-xs text-muted-foreground p-2">
             No categories configured. Add categories in Settings.
           </div>

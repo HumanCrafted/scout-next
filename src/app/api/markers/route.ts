@@ -107,6 +107,10 @@ export async function POST(request: NextRequest) {
         parentId,
         position,
         childPosition
+      },
+      include: {
+        category: true,
+        categoryIcon: true
       }
     });
 
