@@ -192,6 +192,30 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
     }
   };
 
+  const handleLogout = async () => {
+    const confirmLogout = confirm('Are you sure you want to logout? You will need to re-enter the team password.');
+    
+    if (confirmLogout) {
+      try {
+        // Call logout API
+        await fetch('/api/auth/logout', {
+          method: 'POST'
+        });
+        
+        // Clear local storage
+        localStorage.removeItem('scout-team');
+        
+        // Redirect to login page (root)
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Error during logout:', error);
+        // Even if API call fails, clear local storage and redirect
+        localStorage.removeItem('scout-team');
+        window.location.href = '/';
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -387,10 +411,16 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
             <CardDescription>Export and backup your team data</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" onClick={exportData}>
-              <span className="material-icons mr-2">download</span>
-              Export Team Data
-            </Button>
+            <div className="flex gap-4">
+              <Button variant="outline" onClick={exportData}>
+                <span className="material-icons mr-2">download</span>
+                Export Team Data
+              </Button>
+              <Button variant="destructive" onClick={handleLogout}>
+                <span className="material-icons mr-2">logout</span>
+                Logout
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

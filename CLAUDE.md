@@ -956,10 +956,53 @@ Based on user testing feedback, addressed 6 major issues with the custom marker 
 - ✅ **User experience**: Smoother interactions and expected behaviors
 - ✅ **Data integrity**: Protected default categories and proper validation
 
+### 🔧 Final Bug Resolution Session (2025-01-21 - Session 2)
+Addressed remaining critical issues reported after initial fixes:
+
+#### **Critical Fixes Applied**
+1. **Icon Picker Scrolling**: Fixed mouse wheel not working in Material Icons picker
+   - **Solution**: Wrapper div with `onWheel={(e) => e.stopPropagation()}` event handling
+   - **Location**: `MarkerCategoryManager.tsx:CommandList`
+
+2. **Duplicate Area Markers**: Fixed multiple Area 1-10 sets appearing in toolbar  
+   - **Root Cause**: 10 separate database icons vs single numbered icon
+   - **Solution**: Database restructure to single "Area" icon with `isNumbered: true`
+   - **Scripts**: `fix-areas-category.js` and `add-areas-category.js`
+
+3. **Marker Label Corruption**: Fixed "Area 2 1" labels appearing instead of "Area 1"
+   - **Cause**: Legacy malformed data from previous implementations  
+   - **Fix**: `fix-marker-labels.js` script with regex pattern `/^Area\s+(\d+)\s+(\d+)$/`
+
+4. **Color Persistence**: Fixed markers reverting to grey background on map
+   - **Issue**: Incomplete color mapping in `addMarkerToMap` and `renderExistingMarkers`
+   - **Solution**: Comprehensive `getMarkerBackgroundColor()` for all 8 color options
+
+5. **Logout Functionality**: Added logout button with confirmation to settings page
+   - **Features**: Session cleanup, localStorage clearing, redirect to login
+   - **API**: `/api/auth/logout` endpoint with proper error handling
+
+#### **Database Scripts Created**
+- `scripts/fix-areas-category.js`: Converts multiple Area icons to single numbered icon
+- `scripts/fix-marker-labels.js`: Corrects malformed Area marker labels
+- `scripts/add-areas-category.js`: Ensures all teams have default Areas category
+
+#### **Technical Improvements**  
+- **Comprehensive Color Support**: All 8 background colors (dark, light, blue, green, red, yellow, purple, orange) now work throughout app
+- **Event Handling**: Proper scroll event propagation in Command components
+- **Error Handling**: Robust logout functionality with fallback behavior
+- **Data Integrity**: Database cleanup scripts ensure consistent marker labeling
+
+#### **Final Deployment Status** ✅
+- All fixes successfully deployed to Vercel production
+- Database cleanup scripts executed successfully  
+- User feedback indicates all reported issues resolved
+- System fully operational with comprehensive marker category functionality
+
 ---
 *Last updated: 2025-01-21*
 *Built with Claude Code assistance*
 *Next.js migration completed successfully!*
 *Advanced drag & drop system implemented!*
 *Custom marker category system with comprehensive bug fixes!*
+*All critical user-reported issues resolved!*
 *Currently deployed with Vercel and database integration*

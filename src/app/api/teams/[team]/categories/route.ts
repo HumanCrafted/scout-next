@@ -47,19 +47,17 @@ export async function GET(
         }
       });
 
-      // Create default numbered icons for Areas (1-10)
-      for (let i = 1; i <= 10; i++) {
-        await prisma.categoryIcon.create({
-          data: {
-            categoryId: defaultCategory.id,
-            name: `Area ${i}`,
-            icon: 'location_on',
-            backgroundColor: 'dark',
-            isNumbered: true,
-            displayOrder: i - 1,
-          }
-        });
-      }
+      // Create single Area icon that generates 1-10 in toolbar
+      await prisma.categoryIcon.create({
+        data: {
+          categoryId: defaultCategory.id,
+          name: 'Area',
+          icon: 'location_on',
+          backgroundColor: 'dark',
+          isNumbered: true,
+          displayOrder: 0,
+        }
+      });
 
       // Refetch the team with the new category and icons
       const updatedTeam = await prisma.team.findUnique({

@@ -31,19 +31,17 @@ async function addAreasCategory() {
           }
         });
         
-        // Create numbered icons 1-10
-        for (let i = 1; i <= 10; i++) {
-          await prisma.categoryIcon.create({
-            data: {
-              categoryId: areasCategory.id,
-              name: `Area ${i}`,
-              icon: 'location_on',
-              backgroundColor: 'dark',
-              isNumbered: true,
-              displayOrder: i - 1,
-            }
-          });
-        }
+        // Create single Area icon that generates 1-10 in toolbar
+        await prisma.categoryIcon.create({
+          data: {
+            categoryId: areasCategory.id,
+            name: 'Area',
+            icon: 'location_on',
+            backgroundColor: 'dark',
+            isNumbered: true,
+            displayOrder: 0,
+          }
+        });
         
         console.log(`  Created Areas category with 10 numbered icons for ${team.name}`);
       } else {
