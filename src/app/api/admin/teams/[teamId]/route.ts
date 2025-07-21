@@ -96,7 +96,7 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: { displayName: string; passwordHash?: string } = {
       displayName,
     };
 

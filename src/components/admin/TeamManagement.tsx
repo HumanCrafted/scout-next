@@ -411,7 +411,7 @@ export function TeamManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Team</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the team "{teamToDelete?.displayName}"? 
+              Are you sure you want to delete the team &quot;{teamToDelete?.displayName}&quot;? 
               This will permanently delete all maps, markers, and categories for this team. 
               This action cannot be undone.
             </AlertDialogDescription>
