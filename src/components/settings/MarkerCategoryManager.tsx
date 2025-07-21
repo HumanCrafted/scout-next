@@ -76,6 +76,9 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [editIconBackground, setEditIconBackground] = useState('light');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<MarkerCategory | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
 
   useEffect(() => {
     loadCategories();
@@ -260,12 +263,45 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
     }
   };
 
+  const openEditCategory = (category: MarkerCategory) => {
+    setEditingCategory(category);
+    setEditCategoryName(category.name);
+    setIsEditCategoryOpen(true);
+  };
+
+  const editCategory = async () => {
+    if (!editCategoryName.trim() || !editingCategory) return;
+
+    try {
+      const response = await fetch(`/api/teams/${teamSlug}/categories/${editingCategory.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editCategoryName.trim()
+        }),
+      });
+
+      if (response.ok) {
+        await loadCategories();
+        setIsEditCategoryOpen(false);
+        setEditingCategory(null);
+        setEditCategoryName('');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to update category name');
+      }
+    } catch (error) {
+      console.error('Error updating category name:', error);
+      alert('Error updating category name');
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Marker Categories</CardTitle>
         <CardDescription>
-          Manage your team&apos;s marker categories and icons. Create categories like &quot;Areas&quot;, &quot;Devices&quot;, &quot;Assets&quot;, then add multiple icons to each category.
+          Manage your team&apos;s marker categories and icons. Create categories like &quot;Area&quot;, &quot;Devices&quot;, &quot;Assets&quot;, then add multiple icons to each category.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -290,15 +326,25 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{category.name}</CardTitle>
                     <div className="flex gap-2 items-center">
-                      {category.name === 'Areas' ? (
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`areas-toggle-${category.id}`} className="text-sm">Show in toolbar</Label>
-                          <Switch 
-                            id={`areas-toggle-${category.id}`}
-                            checked={category.isVisible}
-                            onCheckedChange={() => toggleCategoryVisibility(category.id, category.isVisible)}
-                          />
-                        </div>
+                      {category.name === 'Area' ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`areas-toggle-${category.id}`} className="text-sm">Show in toolbar</Label>
+                            <Switch 
+                              id={`areas-toggle-${category.id}`}
+                              checked={category.isVisible}
+                              onCheckedChange={() => toggleCategoryVisibility(category.id, category.isVisible)}
+                            />
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openEditCategory(category)}
+                            title="Edit category name"
+                          >
+                            <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                          </Button>
+                        </>
                       ) : (
                         <>
                           <Button 
@@ -308,6 +354,14 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                           >
                             <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
                             Add Icon
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openEditCategory(category)}
+                            title="Edit category name"
+                          >
+                            <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
                           </Button>
                           <Button 
                             variant="outline" 
@@ -373,7 +427,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                {category.name === 'Areas' ? (
+                                {category.name === 'Area' ? (
                                   <span className="text-muted-foreground text-sm px-2 py-1">Default icon</span>
                                 ) : (
                                   <>
@@ -420,7 +474,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                   id="category-name"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g., Areas, Devices, Assets"
+                  placeholder="e.g., Area, Devices, Assets"
                 />
                 <p className="text-xs text-muted-foreground">
                   Categories group related marker types together in the toolbar
@@ -629,6 +683,39 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                 Cancel
               </Button>
               <Button onClick={editIcon}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Category Dialog */}
+        <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category Name</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-name">Category Name</Label>
+                <Input
+                  id="edit-category-name"
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                  placeholder="Enter category name"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This name will be used in the toolbar and for auto-numbering markers
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditCategoryOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={editCategory}>
                 Save Changes
               </Button>
             </DialogFooter>

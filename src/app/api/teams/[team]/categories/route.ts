@@ -32,12 +32,12 @@ export async function GET(
       );
     }
 
-    // If team has no categories, create default "Areas" category
+    // If team has no categories, create default "Area" category
     if (team.markerCategories.length === 0) {
       const defaultCategory = await prisma.markerCategory.create({
         data: {
           teamId: team.id,
-          name: 'Areas',
+          name: 'Area',
           displayOrder: 0,
         },
         include: {

@@ -122,10 +122,10 @@ export async function DELETE(
       );
     }
 
-    // Prevent deletion of the default "Areas" category
-    if (category.name === 'Areas') {
+    // Prevent deletion of the default "Area" category
+    if (category.name === 'Area') {
       return NextResponse.json(
-        { message: 'Cannot delete the default Areas category' },
+        { message: 'Cannot delete the default Area category' },
         { status: 400 }
       );
     }

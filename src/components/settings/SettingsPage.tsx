@@ -331,6 +331,9 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
           </CardContent>
         </Card>
 
+        {/* Marker Categories */}
+        <MarkerCategoryManager teamSlug={teamSlug} />
+
         {/* Team Settings */}
         <Card>
           <CardHeader>
@@ -383,9 +386,6 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
             </div>
           </CardContent>
         </Card>
-
-        {/* Marker Categories */}
-        <MarkerCategoryManager teamSlug={teamSlug} />
 
         {/* Security Settings */}
         <Card>
