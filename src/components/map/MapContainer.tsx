@@ -2080,7 +2080,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       </div>
 
       {/* Right Pin Toolbar - Dynamic Categories with Icons */}
-      <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-3 rounded-lg border border-border shadow-lg">
+      <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg">
         {categoriesLoading ? (
           <div className="text-center text-xs text-muted-foreground p-2">
             <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
@@ -2113,7 +2113,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             return (
               <div key={category.id} className="mb-3">
                 <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1">
                   {category.icons && category.icons.length > 0 ? (
                     category.icons.map((icon) => {
                       // Handle numbered icons (show 1-10)

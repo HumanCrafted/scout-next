@@ -817,10 +817,71 @@ Today's work focused on implementing a comprehensive position-based ordering sys
 ✅ **Database persistence confirmed**
 ✅ **No breaking changes to existing functionality**
 
-## Recent Updates (2025-01-21)
+## Recent Updates (2025-01-21) - Third Session
+
+### 🎨 Enhanced Settings & UI Improvements (v3.1)
+Following the successful custom marker category system, this session focused on user experience refinements:
+
+#### **Settings Page Reorganization**
+1. **Category Name Editing**: 
+   - Added edit button for all categories including "Area"
+   - Dialog-based editing with validation and duplicate name checking
+   - API integration with PUT endpoint for category updates
+   - Real-time category list refresh after edits
+
+2. **Section Reordering**:
+   - Moved "Marker Categories" section above "Team Settings"
+   - Improved logical flow for better user experience
+   - Enhanced settings page hierarchy and organization
+
+3. **Default Category Renaming**:
+   - Changed default category from "Areas" to "Area" (singular)
+   - Updated API to create "Area" category for new teams
+   - Maintains protection from deletion for default category
+
+#### **Persistent Category Visibility System**
+1. **Database Integration**:
+   - Added `isVisible` field to MarkerCategory model
+   - Migration `20250721140701_add_category_visibility`
+   - Default visibility set to true for all categories
+
+2. **API Implementation**:
+   - New endpoint `/api/teams/[team]/categories/[categoryId]/visibility`
+   - PUT method for updating visibility state
+   - Proper error handling and validation
+
+3. **Frontend Integration**:
+   - Switch component properly saves state to database
+   - Toolbar filtering respects visibility settings
+   - Settings page reflects current visibility state across page refreshes
+
+#### **Toolbar Layout Enhancement**
+1. **Two-Column Grid Design**:
+   - Replaced fixed width constraints with natural sizing
+   - `grid grid-cols-2 gap-2` for responsive two-column layout
+   - Removed hardcoded width restrictions for better content fitting
+
+2. **Improved Responsiveness**:
+   - Natural width based on content and padding
+   - Better icon and label spacing
+   - Maintains professional appearance with improved usability
+
+#### **Technical Improvements**
+- **Area Category Special Treatment**: Proper UI differentiation from regular categories
+- **Icon Display Fix**: Shows numbered area icon (1) instead of generic location icon
+- **Validation Enhancement**: Comprehensive duplicate name checking for category edits
+- **State Management**: Proper loading and error states throughout settings interface
+
+#### **User Experience Enhancements**
+- **Intuitive Category Management**: Clear distinction between default and custom categories
+- **Persistent Settings**: All toggle states properly saved to database
+- **Professional UI**: Consistent shadcn/ui components with proper spacing and feedback
+- **Logical Organization**: Settings sections arranged in order of typical user workflow
+
+## Previous Updates (2025-01-20/21)
 
 ### 🎨 Custom Marker Category System Implementation (v3.0)
-Major restructuring to implement fully customizable marker categories as requested:
+Major restructuring to implement fully customizable marker categories:
 
 #### **System Restructuring**
 1. **Renamed "Locations" to "Areas"**: 
@@ -998,6 +1059,39 @@ Addressed remaining critical issues reported after initial fixes:
 - User feedback indicates all reported issues resolved
 - System fully operational with comprehensive marker category functionality
 
+#### **Complete Feature Status** ✅
+- **Settings Page Enhancement**: All reorganization and editing features working
+- **Persistent Visibility**: Database-backed toggle state with proper toolbar filtering  
+- **Two-Column Toolbar**: Grid-based layout with natural width sizing
+- **Category Name Editing**: Full CRUD operations with validation and conflict detection
+- **Professional UI**: Consistent shadcn/ui components throughout
+
+#### **Deployment & Status**
+- **Production Ready**: All features tested and deployed successfully
+- **Database Migrations**: Applied and verified in production environment
+- **User Testing**: Confirmed all requested functionality working as expected
+- **No Breaking Changes**: Backward compatibility maintained throughout
+
+#### **Current State Summary**
+The Scout application now features a fully customizable marker category system with:
+1. ✅ Complete category and icon management in settings
+2. ✅ Persistent visibility toggles with database backing
+3. ✅ Professional two-column toolbar layout
+4. ✅ Comprehensive category name editing with validation
+5. ✅ Proper Area/default category handling and protection
+6. ✅ Intuitive settings page organization and user flow
+- **API Architecture**: RESTful visibility toggle endpoint with team validation
+- **State Management**: Removed local state, uses database values for toggle position
+- **TypeScript Updates**: Enhanced interfaces with `isVisible` and editing state properties
+- **Error Handling**: Comprehensive validation and user feedback for all operations
+
+#### **User Experience Improvements**
+- **Persistent Settings**: Category visibility survives page refreshes and navigation
+- **Full Customization**: All category names editable including protected "Area" category  
+- **Logical Flow**: Settings organized from markers → team → security → data
+- **Better Toolbar**: Two-column layout with natural sizing and improved touch targets
+- **Professional UI**: Consistent shadcn/ui styling with proper loading states
+
 ---
 *Last updated: 2025-01-21*
 *Built with Claude Code assistance*
@@ -1005,4 +1099,6 @@ Addressed remaining critical issues reported after initial fixes:
 *Advanced drag & drop system implemented!*
 *Custom marker category system with comprehensive bug fixes!*
 *All critical user-reported issues resolved!*
+*Settings page enhanced with full category management!*
+*Toolbar redesigned with two-column grid layout!*
 *Currently deployed with Vercel and database integration*

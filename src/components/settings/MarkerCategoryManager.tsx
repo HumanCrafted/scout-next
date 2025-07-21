@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 interface CategoryIcon {
   id: string;
@@ -33,21 +31,6 @@ interface MarkerCategoryManagerProps {
   teamSlug: string;
 }
 
-// Common Material Icons for markers
-const MATERIAL_ICONS = [
-  'place', 'location_on', 'map', 'room', 'pin_drop',
-  'memory', 'computer', 'router', 'wifi', 'bluetooth',
-  'build', 'construction', 'engineering', 'hardware', 'settings',
-  'power', 'electrical_services', 'bolt', 'battery_full', 'cable',
-  'warning', 'error', 'info', 'help', 'check_circle',
-  'account_tree', 'device_hub', 'lan', 'dns', 'cloud',
-  'storage', 'folder', 'inventory', 'category', 'label',
-  'security', 'lock', 'vpn_key', 'shield', 'verified',
-  'speed', 'trending_up', 'analytics', 'insights', 'assessment',
-  'schedule', 'alarm', 'timer', 'access_time', 'today',
-  'person', 'group', 'badge', 'contact_mail', 'phone',
-  'local_shipping', 'fire_truck', 'agriculture', 'factory', 'precision_manufacturing'
-];
 
 const BACKGROUND_COLORS = [
   { value: 'dark', label: 'Dark', preview: '#1f2937' },
@@ -74,8 +57,6 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [editIconName, setEditIconName] = useState('');
   const [editIconIcon, setEditIconIcon] = useState('');
   const [editIconBackground, setEditIconBackground] = useState('light');
-  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
-  const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MarkerCategory | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
@@ -512,48 +493,36 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
               </div>
 
               <div className="space-y-2">
-                <Label>Material Icon</Label>
-                <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <div className="flex items-center gap-2">
-                        {newIconIcon && (
-                          <span className="material-icons" style={{fontSize: '16px'}}>
-                            {newIconIcon}
-                          </span>
-                        )}
-                        <span>{newIconIcon || 'Select an icon'}</span>
-                      </div>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0">
-                    <Command>
-                      <CommandInput placeholder="Search icons..." />
-                      <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
-                        <CommandList>
-                          <CommandEmpty>No icons found.</CommandEmpty>
-                          <CommandGroup>
-                            {MATERIAL_ICONS.map((icon) => (
-                              <CommandItem
-                                key={icon}
-                                value={icon}
-                                onSelect={() => {
-                                  setNewIconIcon(icon);
-                                  setIsIconPickerOpen(false);
-                                }}
-                              >
-                                <span className="material-icons mr-2" style={{fontSize: '16px'}}>
-                                  {icon}
-                                </span>
-                                {icon}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="icon-name-input">Material Icon Name</Label>
+                <div className="flex gap-2">
+                  <div className="flex items-center justify-center w-10 h-10 border rounded bg-muted">
+                    {newIconIcon ? (
+                      <span className="material-icons" style={{fontSize: '16px'}}>
+                        {newIconIcon}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">?</span>
+                    )}
+                  </div>
+                  <Input
+                    id="icon-name-input"
+                    value={newIconIcon}
+                    onChange={(e) => setNewIconIcon(e.target.value)}
+                    placeholder="e.g., memory, wifi, build, power"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter any Material Icons name from{' '}
+                  <a 
+                    href="https://fonts.google.com/icons" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    fonts.google.com/icons
+                  </a>
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -610,48 +579,36 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
               </div>
 
               <div className="space-y-2">
-                <Label>Material Icon</Label>
-                <Popover open={isEditIconPickerOpen} onOpenChange={setIsEditIconPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <div className="flex items-center gap-2">
-                        {editIconIcon && (
-                          <span className="material-icons" style={{fontSize: '16px'}}>
-                            {editIconIcon}
-                          </span>
-                        )}
-                        <span>{editIconIcon || 'Select an icon'}</span>
-                      </div>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0">
-                    <Command>
-                      <CommandInput placeholder="Search icons..." />
-                      <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
-                        <CommandList>
-                          <CommandEmpty>No icons found.</CommandEmpty>
-                          <CommandGroup>
-                            {MATERIAL_ICONS.map((icon) => (
-                              <CommandItem
-                                key={icon}
-                                value={icon}
-                                onSelect={() => {
-                                  setEditIconIcon(icon);
-                                  setIsEditIconPickerOpen(false);
-                                }}
-                              >
-                                <span className="material-icons mr-2" style={{fontSize: '16px'}}>
-                                  {icon}
-                                </span>
-                                {icon}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="edit-icon-name-input">Material Icon Name</Label>
+                <div className="flex gap-2">
+                  <div className="flex items-center justify-center w-10 h-10 border rounded bg-muted">
+                    {editIconIcon ? (
+                      <span className="material-icons" style={{fontSize: '16px'}}>
+                        {editIconIcon}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">?</span>
+                    )}
+                  </div>
+                  <Input
+                    id="edit-icon-name-input"
+                    value={editIconIcon}
+                    onChange={(e) => setEditIconIcon(e.target.value)}
+                    placeholder="e.g., memory, wifi, build, power"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter any Material Icons name from{' '}
+                  <a 
+                    href="https://fonts.google.com/icons" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    fonts.google.com/icons
+                  </a>
+                </p>
               </div>
 
               <div className="space-y-2">
