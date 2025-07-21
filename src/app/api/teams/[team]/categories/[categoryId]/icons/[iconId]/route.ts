@@ -150,7 +150,26 @@ export async function DELETE(
       );
     }
 
-    // Delete the icon (markers using this icon will have categoryIconId set to null due to onDelete: SetNull)
+    // Check if any markers are using this specific icon
+    const markersUsingIcon = await prisma.marker.findMany({
+      where: { categoryIconId: iconId },
+      select: {
+        id: true,
+        label: true
+      }
+    });
+
+    if (markersUsingIcon.length > 0) {
+      return NextResponse.json(
+        { 
+          message: `Cannot delete icon "${categoryIcon.name}" because it has ${markersUsingIcon.length} marker${markersUsingIcon.length === 1 ? '' : 's'} on the map. Please remove all markers using this icon first.`,
+          markersInUse: markersUsingIcon.map(m => m.label)
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete the icon (safe to delete since no markers are using it)
     await prisma.categoryIcon.delete({
       where: { id: iconId }
     });

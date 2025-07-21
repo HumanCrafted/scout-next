@@ -138,7 +138,10 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   };
 
   const deleteCategory = async (categoryId: string) => {
-    if (!confirm('Are you sure you want to delete this category? All icons within it will be removed.')) return;
+    const category = categories.find(cat => cat.id === categoryId);
+    const categoryName = category?.name || 'this category';
+    
+    if (!confirm(`Are you sure you want to delete "${categoryName}"? All icons within it will also be removed.`)) return;
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}`, {
@@ -149,7 +152,16 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         await loadCategories();
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to delete category');
+        
+        // Enhanced error handling for usage validation
+        if (error.markersInUse && error.markersInUse.length > 0) {
+          const markerList = error.markersInUse.slice(0, 5).join(', ');
+          const additionalCount = error.markersInUse.length > 5 ? ` (and ${error.markersInUse.length - 5} more)` : '';
+          
+          alert(`${error.message}\n\nMarkers using this category: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the category again.`);
+        } else {
+          alert(error.message || 'Failed to delete category');
+        }
       }
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -190,7 +202,11 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   };
 
   const deleteIcon = async (categoryId: string, iconId: string) => {
-    if (!confirm('Are you sure you want to delete this icon?')) return;
+    const category = categories.find(cat => cat.id === categoryId);
+    const icon = category?.icons?.find(ic => ic.id === iconId);
+    const iconName = icon?.name || 'this icon';
+    
+    if (!confirm(`Are you sure you want to delete "${iconName}"?`)) return;
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}/icons/${iconId}`, {
@@ -201,7 +217,16 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         await loadCategories();
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to delete icon');
+        
+        // Enhanced error handling for usage validation
+        if (error.markersInUse && error.markersInUse.length > 0) {
+          const markerList = error.markersInUse.slice(0, 5).join(', ');
+          const additionalCount = error.markersInUse.length > 5 ? ` (and ${error.markersInUse.length - 5} more)` : '';
+          
+          alert(`${error.message}\n\nMarkers using this icon: ${markerList}${additionalCount}\n\nPlease go to the map and remove these markers first, then try deleting the icon again.`);
+        } else {
+          alert(error.message || 'Failed to delete icon');
+        }
       }
     } catch (error) {
       console.error('Error deleting icon:', error);

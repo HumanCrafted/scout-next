@@ -130,7 +130,26 @@ export async function DELETE(
       );
     }
 
-    // Delete the category (markers using this category will have categoryId set to null due to onDelete: SetNull)
+    // Check if any markers are using this category
+    const markersUsingCategory = await prisma.marker.findMany({
+      where: { categoryId: categoryId },
+      select: {
+        id: true,
+        label: true
+      }
+    });
+
+    if (markersUsingCategory.length > 0) {
+      return NextResponse.json(
+        { 
+          message: `Cannot delete category "${category.name}" because it has ${markersUsingCategory.length} marker${markersUsingCategory.length === 1 ? '' : 's'} on the map. Please remove all markers using this category first.`,
+          markersInUse: markersUsingCategory.map(m => m.label)
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete the category (safe to delete since no markers are using it)
     await prisma.markerCategory.delete({
       where: { id: categoryId }
     });
