@@ -39,15 +39,17 @@ export async function POST(request: NextRequest) {
       lat, 
       lng, 
       type, 
+      categoryId,
+      categoryIconId,
       zoneNumber, 
       deviceIcon, 
       assetIcon, 
       parentId 
     } = await request.json();
 
-    if (!mapId || !label || lat === undefined || lng === undefined || !type) {
+    if (!mapId || !label || lat === undefined || lng === undefined) {
       return NextResponse.json(
-        { error: 'mapId, label, lat, lng, and type are required' },
+        { error: 'mapId, label, lat, and lng are required' },
         { status: 400 }
       );
     }
@@ -96,7 +98,9 @@ export async function POST(request: NextRequest) {
         label,
         lat: parseFloat(lat),
         lng: parseFloat(lng),
-        type,
+        type: type || 'marker', // Default type for backward compatibility
+        categoryId,
+        categoryIconId,
         zoneNumber: zoneNumber ? parseInt(zoneNumber) : null,
         deviceIcon,
         assetIcon,
