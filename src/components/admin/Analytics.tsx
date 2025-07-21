@@ -183,8 +183,8 @@ export function Analytics() {
                 {analytics.teamStats.map((team) => (
                   <TableRow key={team.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{team.displayName}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{team.displayName}</span>
                         <Badge variant="outline" className="text-xs">{team.name}</Badge>
                       </div>
                     </TableCell>
@@ -257,8 +257,8 @@ export function Analytics() {
                 {analytics.recentActivity.map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{activity.teamDisplayName}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{activity.teamDisplayName}</span>
                         <Badge variant="outline" className="text-xs">{activity.teamName}</Badge>
                       </div>
                     </TableCell>
