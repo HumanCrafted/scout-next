@@ -2031,14 +2031,6 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             <span className="material-icons mr-3" style={{fontSize: '14px'}}>help</span>
             Help
           </button>
-          <button 
-            className="w-full flex items-center px-2 py-2 text-muted-foreground hover:bg-muted rounded-md transition-colors"
-            style={{fontSize: '0.75rem', fontWeight: '500'}}
-            title="Recently deleted maps"
-          >
-            <span className="material-icons mr-3" style={{fontSize: '14px'}}>delete</span>
-            Recently Deleted
-          </button>
         </div>
       </div>
 
