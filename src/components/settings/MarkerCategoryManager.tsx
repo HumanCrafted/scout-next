@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -74,6 +75,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
   const [editIconBackground, setEditIconBackground] = useState('light');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
+  const [areasVisible, setAreasVisible] = useState(true);
 
   useEffect(() => {
     loadCategories();
@@ -266,23 +268,34 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{category.name}</CardTitle>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openCreateIcon(category.id)}
-                      >
-                        <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
-                        Add Icon
-                      </Button>
-                      {category.name !== 'Areas' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => deleteCategory(category.id)}
-                        >
-                          <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
-                        </Button>
+                    <div className="flex gap-2 items-center">
+                      {category.name === 'Areas' ? (
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`areas-toggle-${category.id}`} className="text-sm">Show in toolbar</Label>
+                          <Switch 
+                            id={`areas-toggle-${category.id}`}
+                            checked={areasVisible}
+                            onCheckedChange={setAreasVisible}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openCreateIcon(category.id)}
+                          >
+                            <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
+                            Add Icon
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => deleteCategory(category.id)}
+                          >
+                            <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -324,9 +337,13 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                                   color: ['dark', 'blue', 'green', 'red', 'yellow', 'purple', 'orange'].includes(icon.backgroundColor) ? 'white' : '#1f2937'
                                 }}
                               >
-                                <span className="material-icons" style={{fontSize: '16px'}}>
-                                  {icon.icon}
-                                </span>
+                                {icon.isNumbered ? (
+                                  <span style={{ fontSize: '14px', fontWeight: 'bold' }}>1</span>
+                                ) : (
+                                  <span className="material-icons" style={{fontSize: '16px'}}>
+                                    {icon.icon}
+                                  </span>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">{icon.name}</TableCell>
@@ -335,20 +352,26 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => openEditIcon(category.id, icon)}
-                                >
-                                  <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => deleteIcon(category.id, icon.id)}
-                                >
-                                  <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
-                                </Button>
+                                {category.name === 'Areas' ? (
+                                  <span className="text-muted-foreground text-sm px-2 py-1">Default icon</span>
+                                ) : (
+                                  <>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => openEditIcon(category.id, icon)}
+                                    >
+                                      <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => deleteIcon(category.id, icon.id)}
+                                    >
+                                      <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
