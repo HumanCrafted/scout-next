@@ -15,7 +15,12 @@ export async function GET(
       where: { name: teamName },
       include: {
         markerCategories: {
-          orderBy: { displayOrder: 'asc' }
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            icons: {
+              orderBy: { displayOrder: 'asc' }
+            }
+          }
         }
       }
     });
@@ -46,11 +51,11 @@ export async function POST(
 ) {
   try {
     const { team: teamName } = await params;
-    const { name, icon, backgroundColor, displayOrder } = await request.json();
+    const { name, displayOrder } = await request.json();
 
-    if (!name || !icon) {
+    if (!name) {
       return NextResponse.json(
-        { message: 'Name and icon are required' },
+        { message: 'Category name is required' },
         { status: 400 }
       );
     }
@@ -87,9 +92,12 @@ export async function POST(
       data: {
         teamId: team.id,
         name: name.trim(),
-        icon,
-        backgroundColor: backgroundColor || 'light',
         displayOrder: displayOrder ?? 0,
+      },
+      include: {
+        icons: {
+          orderBy: { displayOrder: 'asc' }
+        }
       }
     });
 

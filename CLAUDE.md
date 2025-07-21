@@ -30,12 +30,17 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - Automatic map centering and pin placement for search results
 - Re-center button to return to last search location
 
-### 📍 Advanced Marker System
-- **Three marker types**:
-  - **Locations**: Numbered 1-10 with dark background
-  - **Devices**: Multiple icons (memory, wifi, solar-panel) with light background
-  - **Assets**: Multiple icons (build, lan, warning, power) with light background
-- Drag-and-drop placement from sidebar toolbar
+### 📍 Advanced Custom Marker System
+- **Fully Customizable Categories**: Teams create their own marker categories and icons
+- **Multi-Icon Categories**: Each category (e.g., "Areas", "Devices", "Assets") can contain multiple icons
+- **Material Icons Integration**: 150+ Material Design icons available with searchable picker
+- **Flexible Marker Types**:
+  - **Areas**: Numbered 1-10 with dark background (renamed from "Locations" to avoid search pin confusion)
+  - **Custom Categories**: Team-defined categories with multiple icon options
+  - **Auto-numbering**: New markers automatically numbered by category (e.g., "Device 1", "Device 2")
+- **Team Settings Management**: Complete category and icon customization through Settings page
+- **Icon Configuration**: Each icon has name, Material Icon, background color, and numbering options
+- Drag-and-drop placement from dynamically generated sidebar toolbar
 - **Advanced marker management**:
   - Professional edit dialog with name and GPS coordinate fields
   - Lock/unlock functionality to prevent accidental marker movement
@@ -56,20 +61,22 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 
 ### 🎨 User Interface
 - **Left sidebar**: Start New Map button, search box, map title editor, and placed markers list
-- **Right sidebar**: Draggable marker toolbar (95px width)
+- **Right sidebar**: Dynamic marker toolbar (95px width) rendering team's custom categories and icons
 - **Bottom controls**: Zoom display, map style toggle, labels toggle, re-center button
 - Material Design icons (16px for markers, 12px for controls) for compact, intuitive controls
 - Consistent shadcn/ui theming throughout
 - **Screenshot mode**: Hides all UI elements and shows all labels for clean screenshots
 - **Professional modal dialogs**: Custom-styled edit dialogs with keyboard support
+- **Settings page**: Comprehensive team settings with marker category and icon management
 
 ### 💾 Data Management
-- **File-based save/load system**: JSON format with drag-and-drop support
-- User-customizable filenames with automatic timestamping
-- Local timezone timestamps (format: YYYY-MM-DDTHHMMSS)
-- Map title persistence in saved files
-- Marker grouping data preserved in save files
-- Clear confirmation dialog to prevent accidental data loss
+- **Database-driven persistence**: All data stored in Vercel Postgres with real-time updates
+- **Team isolation**: Complete data separation between teams with secure authentication
+- **Custom marker categories**: Team-specific category and icon definitions
+- **Auto-save functionality**: Changes automatically persisted to database
+- **Export capabilities**: JSON export functionality for backup and migration
+- **Position-based ordering**: Database fields for drag-and-drop marker reordering
+- **Legacy support**: Backward compatibility with existing marker data
 
 ### 🏷️ Labels & Visualization
 - Toggle-able labels for all markers
@@ -79,7 +86,10 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - Screenshot mode for clean map exports
 
 ### ⚙️ Technical Features
-- Icon-specific data persistence (deviceIcon, assetIcon fields)
+- **Custom category system**: Database-driven marker categories with multiple icons per category
+- **Dynamic toolbar generation**: Toolbar rendered from team's custom category and icon definitions
+- **Material Icons integration**: Searchable icon picker with 150+ Material Design icons
+- **Auto-numbering algorithm**: Smart number assignment based on existing markers in category
 - Hierarchical marker organization with parent-child relationships
 - **Position-based ordering system**: Database fields for position tracking and drag-to-reorder
 - **Advanced drag detection**: Mouse position analysis and height threshold system (25% edge zones)
@@ -87,6 +97,8 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - **Group reordering**: Complete groups can be dragged and reordered as atomic units
 - **Smart operation restrictions**: Groups can only reorder, individual markers can reorder or group
 - **Child marker protection**: Only root/parent markers can accept grouping operations
+- **Database schema**: Normalized tables for categories, icons, and markers with proper relationships
+- **API architecture**: RESTful endpoints for category and icon management
 - Event-driven architecture for map interactions
 - Optimized for industrial use with clear, professional styling
 - Responsive design with fixed sidebar layout
@@ -805,9 +817,82 @@ Today's work focused on implementing a comprehensive position-based ordering sys
 ✅ **Database persistence confirmed**
 ✅ **No breaking changes to existing functionality**
 
+## Recent Updates (2025-01-21)
+
+### 🎨 Custom Marker Category System Implementation (v3.0)
+Major restructuring to implement fully customizable marker categories as requested:
+
+#### **System Restructuring**
+1. **Renamed "Locations" to "Areas"**: 
+   - Eliminated confusion with search location pins
+   - Updated database migration to rename existing categories
+   - "Areas" better represents numbered zone markers (1-10)
+
+2. **Multi-Icon Category Architecture**:
+   - **Before**: Each category had one icon (1:1 relationship)
+   - **After**: Categories contain multiple icons (1:many relationship)
+   - Teams create categories like "Devices" and add multiple device icons within it
+
+#### **Enhanced Database Schema**
+- **New `CategoryIcon` model**: Stores icons within categories
+  - Fields: `name`, `icon`, `backgroundColor`, `isNumbered`, `displayOrder`
+  - Supports both numbered (1-10) and regular auto-numbered icons
+- **Updated `Marker` model**: References both `categoryId` and `categoryIconId`
+- **Migration `20250720235500_restructure_categories_with_multiple_icons`**: 
+  - Preserves existing data during conversion
+  - Creates icons from existing categories
+  - Handles "Locations" → "Areas" renaming
+
+#### **Comprehensive Settings UI**
+- **Category Management**: Create categories like "Areas", "Devices", "Assets"
+- **Icon Management**: Add multiple icons to each category with rich configuration
+- **Material Icons Picker**: Searchable interface with 150+ Material Design icons
+- **Icon Configuration**: Name, icon, background color, numbered option per icon
+- **Intuitive Interface**: Nested cards showing categories with their icons in tables
+
+#### **New API Architecture**
+```
+/api/teams/[team]/categories                          # Category CRUD
+/api/teams/[team]/categories/[categoryId]/icons       # Icon CRUD within category  
+/api/teams/[team]/categories/[categoryId]/icons/[iconId] # Individual icon management
+```
+
+#### **Auto-Numbering Enhancement**
+- **Smart Algorithm**: Finds highest existing number per category and increments
+- **Category-Specific**: "Device 1", "Device 2" vs "Area 1", "Area 2"
+- **Numbered vs Regular**: Special handling for numbered icons (1-10) vs unlimited auto-numbering
+
+#### **Dynamic Toolbar Generation**
+- Toolbar now renders from team's custom categories and icons (not hardcoded)
+- Each category appears as a section with all its icons
+- Maintains drag-and-drop functionality with new category/icon structure
+- Supports both numbered area icons and regular category icons
+
+#### **Technical Improvements**
+- **Type Safety**: Updated interfaces for CategoryIcon and MarkerCategory
+- **Error Handling**: ESLint compliance with proper quote escaping
+- **Route Structure**: Consistent parameter naming (`categoryId` vs `id`)
+- **Database Relations**: Proper foreign keys and cascade deletes
+- **Legacy Support**: Backward compatibility with existing marker data
+
+#### **User Experience**
+- **Clear Workflow**: Create category → Add icons → Use in toolbar
+- **Flexible System**: Teams can have one category with many icons, or many categories
+- **Professional UI**: shadcn/ui components throughout settings interface
+- **Intuitive Controls**: Material Icons with preview, background color selection
+
+#### **Migration Benefits**
+✅ **No more hardcoded marker types** - Fully team-customizable
+✅ **Eliminates location/search confusion** - "Areas" vs search "Locations"  
+✅ **Multi-icon categories** - Teams can organize as they prefer
+✅ **Rich icon configuration** - Material Icons with full customization
+✅ **Auto-numbering system** - Smart category-aware numbering
+✅ **Professional settings interface** - Complete team control
+
 ---
-*Last updated: 2025-01-20*
+*Last updated: 2025-01-21*
 *Built with Claude Code assistance*
 *Next.js migration completed successfully!*
 *Advanced drag & drop system implemented!*
+*Custom marker category system implemented!*
 *Currently deployed with Vercel and database integration*

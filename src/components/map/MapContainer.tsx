@@ -17,6 +17,7 @@ interface Marker {
   lng: number;
   type: string;
   categoryId?: string | null;
+  categoryIconId?: string | null;
   zoneNumber?: number;
   deviceIcon?: string;
   assetIcon?: string;
@@ -27,12 +28,20 @@ interface Marker {
   children?: Marker[];
 }
 
-interface MarkerCategory {
+interface CategoryIcon {
   id: string;
   name: string;
   icon: string;
   backgroundColor: string;
+  isNumbered: boolean;
   displayOrder: number;
+}
+
+interface MarkerCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
+  icons?: CategoryIcon[];
 }
 
 interface MapContainerProps {
@@ -71,9 +80,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   // Drag and drop state
   const [draggedPinType, setDraggedPinType] = useState<{
     categoryId: string;
+    categoryIconId: string;
     categoryName: string;
+    iconName: string;
     icon: string;
-    zoneNumber?: number; // For numbered location markers
+    zoneNumber?: number; // For numbered icons (1-10)
   } | null>(null);
   
   // Marker grouping state
@@ -209,15 +220,15 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     }
   };
 
-  // Get next auto-number for a category
-  const getNextCategoryNumber = (categoryName: string): number => {
+  // Get next auto-number for an icon type
+  const getNextCategoryNumber = (iconName: string): number => {
     const existingMarkers = markers.filter(marker => 
-      marker.label.toLowerCase().startsWith(categoryName.toLowerCase())
+      marker.label.toLowerCase().startsWith(iconName.toLowerCase())
     );
     
     let maxNumber = 0;
     existingMarkers.forEach(marker => {
-      const match = marker.label.match(new RegExp(`^${categoryName}\\s+(\\d+)$`, 'i'));
+      const match = marker.label.match(new RegExp(`^${iconName}\\s+(\\d+)$`, 'i'));
       if (match) {
         const num = parseInt(match[1]);
         if (num > maxNumber) {
@@ -1044,7 +1055,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   };
 
   // Add marker to map and database
-  const addMarkerToMap = useCallback(async (lng: number, lat: number, label: string, categoryId: string) => {
+  const addMarkerToMap = useCallback(async (lng: number, lat: number, label: string, categoryId: string, categoryIconId?: string) => {
     const currentMapId = mapIdRef.current;
     
     if (!currentMapId) {
@@ -1057,15 +1068,28 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       return;
     }
 
-    // Find the category for styling (or handle special search case)
+    // Find the category and icon for styling (or handle special search case)
     let category;
+    let categoryIcon;
     if (categoryId === 'search') {
       // Special case for search result markers
-      category = { id: 'search', name: 'Search', icon: 'location_on', backgroundColor: 'light' };
+      category = { id: 'search', name: 'Search' };
+      categoryIcon = { id: 'search', name: 'Search', icon: 'location_on', backgroundColor: 'light', isNumbered: false };
     } else {
       category = markerCategories.find(cat => cat.id === categoryId);
       if (!category) {
         console.error('Category not found for marker creation');
+        return;
+      }
+      
+      if (categoryIconId) {
+        categoryIcon = category.icons?.find(icon => icon.id === categoryIconId);
+        if (!categoryIcon) {
+          console.error('Category icon not found for marker creation');
+          return;
+        }
+      } else {
+        console.error('Category icon ID required for marker creation');
         return;
       }
     }
@@ -1082,7 +1106,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           label,
           lat,
           lng,
-          ...(categoryId !== 'search' && { categoryId }),
+          ...(categoryId !== 'search' && { categoryId, categoryIconId }),
           ...(categoryId === 'search' && { type: 'search' })
         }),
       });
@@ -1097,9 +1121,9 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           m.isActive ? { ...m, markers: [...m.markers, marker] } : m
         ));
         
-        // Create custom marker element based on category
+        // Create custom marker element based on category icon
         const el = document.createElement('div');
-        el.className = `custom-marker category-${category.id}`;
+        el.className = `custom-marker category-${category.id} icon-${categoryIcon.id}`;
         el.style.cssText = `
           width: 30px;
           height: 30px;
@@ -1115,30 +1139,30 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         
-        // Set background color and content based on category
-        if (category.backgroundColor === 'dark') {
+        // Set background color and content based on category icon
+        if (categoryIcon.backgroundColor === 'dark') {
           el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
           el.style.color = 'hsl(210 40% 98%)';
           
           // Check if this is a numbered marker (contains number in label)
           const numberMatch = label.match(/(\d+)$/);
-          if (numberMatch) {
+          if (numberMatch && categoryIcon.isNumbered) {
             el.textContent = numberMatch[1];
           } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${category.icon}</span>`;
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${categoryIcon.icon}</span>`;
           }
         } else {
           // Light background
           el.style.backgroundColor = 'rgb(243, 243, 243)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
           
-          if (category.icon === 'solar-panel') {
+          if (categoryIcon.icon === 'solar-panel') {
             el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
               <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
             </svg>`;
           } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${category.icon}</span>`;
+            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${categoryIcon.icon}</span>`;
           }
         }
         
@@ -1929,19 +1953,20 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           // Generate label with auto-numbering
           let label;
           if (draggedPinType.zoneNumber) {
-            // For numbered locations (1-10)
-            label = `${draggedPinType.categoryName} ${draggedPinType.zoneNumber}`;
+            // For numbered icons (1-10)
+            label = `${draggedPinType.iconName} ${draggedPinType.zoneNumber}`;
           } else {
-            // For regular categories, auto-number them
-            const nextNumber = getNextCategoryNumber(draggedPinType.categoryName);
-            label = `${draggedPinType.categoryName} ${nextNumber}`;
+            // For regular icons, auto-number them
+            const nextNumber = getNextCategoryNumber(draggedPinType.iconName);
+            label = `${draggedPinType.iconName} ${nextNumber}`;
           }
           
           addMarkerToMap(
             lngLat.lng, 
             lngLat.lat, 
             label, 
-            draggedPinType.categoryId
+            draggedPinType.categoryId,
+            draggedPinType.categoryIconId
           );
           
           setDraggedPinType(null);
@@ -2003,7 +2028,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         </Button>
       </div>
 
-      {/* Right Pin Toolbar - Dynamic Categories */}
+      {/* Right Pin Toolbar - Dynamic Categories with Icons */}
       <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
         {markerCategories.length === 0 ? (
           <div className="text-center text-xs text-muted-foreground p-2">
@@ -2011,7 +2036,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           </div>
         ) : (
           markerCategories.map((category) => {
-            // Get background color class
+            // Get background color class for icons
             const getBgClass = (bgColor: string) => {
               switch (bgColor) {
                 case 'dark': return 'bg-foreground text-white';
@@ -2026,62 +2051,70 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
               }
             };
 
-            // Handle special case for "Locations" category (numbered 1-10)
-            if (category.name.toLowerCase() === 'locations') {
-              return (
-                <div key={category.id} className="mb-4">
-                  <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
-                  <div className="flex flex-wrap gap-1 justify-start">
-                    {[1,2,3,4,5,6,7,8,9,10].map(num => (
-                      <div
-                        key={num}
-                        className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(category.backgroundColor)}`}
-                        draggable={true}
-                        title={`${category.name} ${num}`}
-                        onDragStart={(e) => {
-                          setDraggedPinType({
-                            categoryId: category.id,
-                            categoryName: category.name,
-                            icon: category.icon,
-                            zoneNumber: num
-                          });
-                          e.dataTransfer.effectAllowed = 'copy';
-                        }}
-                        onDragEnd={() => {
-                          setDraggedPinType(null);
-                        }}
-                      >
-                        {num}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-
-            // Regular category (single icon)
             return (
               <div key={category.id} className="mb-4">
                 <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
-                <div className="flex flex-wrap gap-1">
-                  <div
-                    className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(category.backgroundColor)}`}
-                    draggable={true}
-                    title={category.name}
-                    onDragStart={(e) => {
-                      setDraggedPinType({
-                        categoryId: category.id,
-                        categoryName: category.name,
-                        icon: category.icon
-                      });
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onDragEnd={() => {
-                      setDraggedPinType(null);
-                    }}
-                  >
-                    <span className="material-icons" style={{fontSize: '16px'}}>{category.icon}</span>
-                  </div>
+                <div className="flex flex-wrap gap-1 justify-start">
+                  {category.icons && category.icons.length > 0 ? (
+                    category.icons.map((icon) => {
+                      // Handle numbered icons (show 1-10)
+                      if (icon.isNumbered) {
+                        return [1,2,3,4,5,6,7,8,9,10].map(num => (
+                          <div
+                            key={`${icon.id}-${num}`}
+                            className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
+                            draggable={true}
+                            title={`${icon.name} ${num}`}
+                            onDragStart={(e) => {
+                              setDraggedPinType({
+                                categoryId: category.id,
+                                categoryIconId: icon.id,
+                                categoryName: category.name,
+                                iconName: icon.name,
+                                icon: icon.icon,
+                                zoneNumber: num
+                              });
+                              e.dataTransfer.effectAllowed = 'copy';
+                            }}
+                            onDragEnd={() => {
+                              setDraggedPinType(null);
+                            }}
+                          >
+                            {num}
+                          </div>
+                        ));
+                      } else {
+                        // Regular icon (single instance)
+                        return (
+                          <div
+                            key={icon.id}
+                            className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
+                            draggable={true}
+                            title={icon.name}
+                            onDragStart={(e) => {
+                              setDraggedPinType({
+                                categoryId: category.id,
+                                categoryIconId: icon.id,
+                                categoryName: category.name,
+                                iconName: icon.name,
+                                icon: icon.icon
+                              });
+                              e.dataTransfer.effectAllowed = 'copy';
+                            }}
+                            onDragEnd={() => {
+                              setDraggedPinType(null);
+                            }}
+                          >
+                            <span className="material-icons" style={{fontSize: '16px'}}>{icon.icon}</span>
+                          </div>
+                        );
+                      }
+                    })
+                  ) : (
+                    <div className="text-center text-xs text-muted-foreground p-1">
+                      No icons in this category
+                    </div>
+                  )}
                 </div>
               </div>
             );

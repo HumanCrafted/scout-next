@@ -5,15 +5,15 @@ const prisma = new PrismaClient();
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ team: string; id: string }> }
+  { params }: { params: Promise<{ team: string; categoryId: string }> }
 ) {
   try {
-    const { team: teamName, id: categoryId } = await params;
-    const { name, icon, backgroundColor } = await request.json();
+    const { team: teamName, categoryId } = await params;
+    const { name } = await request.json();
 
-    if (!name || !icon) {
+    if (!name) {
       return NextResponse.json(
-        { message: 'Name and icon are required' },
+        { message: 'Category name is required' },
         { status: 400 }
       );
     }
@@ -68,9 +68,12 @@ export async function PUT(
       where: { id: categoryId },
       data: {
         name: name.trim(),
-        icon,
-        backgroundColor: backgroundColor || 'light',
         updatedAt: new Date()
+      },
+      include: {
+        icons: {
+          orderBy: { displayOrder: 'asc' }
+        }
       }
     });
 
@@ -87,10 +90,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ team: string; id: string }> }
+  { params }: { params: Promise<{ team: string; categoryId: string }> }
 ) {
   try {
-    const { team: teamName, id: categoryId } = await params;
+    const { team: teamName, categoryId } = await params;
 
     // Find the team
     const team = await prisma.team.findUnique({

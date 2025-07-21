@@ -70,6 +70,7 @@ model Marker {
   lng           Float
   type          String   // Keep for backward compatibility
   categoryId    String?  // Reference to custom marker category
+  categoryIconId String? // Reference to specific icon within category
   zoneNumber    Int?     // For numbered location markers (1-10)
   deviceIcon    String?  // Legacy field, kept for backward compatibility
   assetIcon     String?  // Legacy field, kept for backward compatibility
@@ -81,10 +82,11 @@ model Marker {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  map         Map             @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  category    MarkerCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  parent      Marker?         @relation("MarkerHierarchy", fields: [parentId], references: [id])
-  children    Marker[]        @relation("MarkerHierarchy")
+  map          Map             @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  category     MarkerCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryIcon CategoryIcon?   @relation("MarkerCategoryIcon", fields: [categoryIconId], references: [id], onDelete: SetNull)
+  parent       Marker?         @relation("MarkerHierarchy", fields: [parentId], references: [id])
+  children     Marker[]        @relation("MarkerHierarchy")
 
   @@map("markers")
 }
@@ -93,19 +95,38 @@ model Marker {
 model MarkerCategory {
   id           String   @id @default(cuid())
   teamId       String
-  name         String   // Category name like "Devices", "Assets", etc.
-  icon         String   // Material Icons name like "memory", "build", etc.
-  backgroundColor String? // Background color style: "dark", "light", "blue", etc.
+  name         String   // Category name like "Areas", "Devices", "Assets", etc.
   displayOrder Int      @default(0) // Order in toolbar
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relations
-  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  markers      Marker[] // Markers using this category
+  team         Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  icons        CategoryIcon[] // Icons within this category
+  markers      Marker[]       // Markers using this category
 
   @@unique([teamId, name]) // Prevent duplicate category names per team
   @@map("marker_categories")
+}
+
+// Icons within marker categories
+model CategoryIcon {
+  id           String   @id @default(cuid())
+  categoryId   String
+  name         String   // Icon name like "Device 1", "Sensor A", etc.
+  icon         String   // Material Icons name like "memory", "build", etc.
+  backgroundColor String? // Background color style: "dark", "light", "blue", etc.
+  isNumbered   Boolean  @default(false) // Whether this icon shows numbers (1-10)
+  displayOrder Int      @default(0) // Order within category
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  category     MarkerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  markers      Marker[]       @relation("MarkerCategoryIcon")
+
+  @@unique([categoryId, name]) // Prevent duplicate icon names per category
+  @@map("category_icons")
 }
 
 // Action history for undo/redo

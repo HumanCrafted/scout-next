@@ -10,13 +10,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Switch } from '@/components/ui/switch';
 
-interface MarkerCategory {
+interface CategoryIcon {
   id: string;
   name: string;
   icon: string;
   backgroundColor: string;
+  isNumbered: boolean;
   displayOrder: number;
+}
+
+interface MarkerCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
+  icons: CategoryIcon[];
 }
 
 interface MarkerCategoryManagerProps {
@@ -52,21 +61,15 @@ const BACKGROUND_COLORS = [
 
 export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManagerProps) {
   const [categories, setCategories] = useState<MarkerCategory[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<MarkerCategory | null>(null);
-  const [isIconPopoverOpen, setIsIconPopoverOpen] = useState(false);
-  const [isEditIconPopoverOpen, setIsEditIconPopoverOpen] = useState(false);
-  
-  // Form state for new category
-  const [newName, setNewName] = useState('');
-  const [newIcon, setNewIcon] = useState('place');
-  const [newBackgroundColor, setNewBackgroundColor] = useState('light');
-  
-  // Form state for editing category
-  const [editName, setEditName] = useState('');
-  const [editIcon, setEditIcon] = useState('');
-  const [editBackgroundColor, setEditBackgroundColor] = useState('');
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+  const [isCreateIconOpen, setIsCreateIconOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newIconName, setNewIconName] = useState('');
+  const [newIconIcon, setNewIconIcon] = useState('');
+  const [newIconBackground, setNewIconBackground] = useState('light');
+  const [newIconIsNumbered, setNewIconIsNumbered] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -77,385 +80,361 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
       const response = await fetch(`/api/teams/${teamSlug}/categories`);
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setCategories(data.categories);
       }
     } catch (error) {
       console.error('Error loading categories:', error);
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!newName.trim()) return;
+  const createCategory = async () => {
+    if (!newCategoryName.trim()) return;
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newName.trim(),
-          icon: newIcon,
-          backgroundColor: newBackgroundColor,
-          displayOrder: categories.length,
+          name: newCategoryName.trim(),
+          displayOrder: categories.length
         }),
       });
 
       if (response.ok) {
         await loadCategories();
-        setIsAddDialogOpen(false);
-        setNewName('');
-        setNewIcon('place');
-        setNewBackgroundColor('light');
+        setIsCreateCategoryOpen(false);
+        setNewCategoryName('');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to create category');
       }
     } catch (error) {
-      console.error('Error adding category:', error);
+      console.error('Error creating category:', error);
+      alert('Error creating category');
     }
   };
 
-  const handleEditCategory = (category: MarkerCategory) => {
-    setEditingCategory(category);
-    setEditName(category.name);
-    setEditIcon(category.icon);
-    setEditBackgroundColor(category.backgroundColor);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleUpdateCategory = async () => {
-    if (!editingCategory || !editName.trim()) return;
+  const createIcon = async () => {
+    if (!newIconName.trim() || !newIconIcon || !selectedCategoryId) return;
 
     try {
-      const response = await fetch(`/api/teams/${teamSlug}/categories/${editingCategory.id}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/teams/${teamSlug}/categories/${selectedCategoryId}/icons`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: editName.trim(),
-          icon: editIcon,
-          backgroundColor: editBackgroundColor,
+          name: newIconName.trim(),
+          icon: newIconIcon,
+          backgroundColor: newIconBackground,
+          isNumbered: newIconIsNumbered,
+          displayOrder: 0
         }),
       });
 
       if (response.ok) {
         await loadCategories();
-        setIsEditDialogOpen(false);
-        setEditingCategory(null);
+        setIsCreateIconOpen(false);
+        setNewIconName('');
+        setNewIconIcon('');
+        setNewIconBackground('light');
+        setNewIconIsNumbered(false);
+        setSelectedCategoryId(null);
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to create icon');
       }
     } catch (error) {
-      console.error('Error updating category:', error);
+      console.error('Error creating icon:', error);
+      alert('Error creating icon');
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Are you sure you want to delete this category? Existing markers using this category will not be affected.')) {
-      return;
-    }
+  const deleteCategory = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this category? All icons within it will be removed.')) return;
 
     try {
       const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}`, {
-        method: 'DELETE',
+        method: 'DELETE'
       });
 
       if (response.ok) {
         await loadCategories();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to delete category');
       }
     } catch (error) {
       console.error('Error deleting category:', error);
+      alert('Error deleting category');
     }
   };
 
-  const moveCategory = async (categoryId: string, direction: 'up' | 'down') => {
-    const currentIndex = categories.findIndex(c => c.id === categoryId);
-    if (currentIndex === -1) return;
-
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (newIndex < 0 || newIndex >= categories.length) return;
-
-    // Create new array with swapped positions
-    const newCategories = [...categories];
-    const temp = newCategories[currentIndex];
-    newCategories[currentIndex] = newCategories[newIndex];
-    newCategories[newIndex] = temp;
-
-    // Update display orders
-    for (let i = 0; i < newCategories.length; i++) {
-      newCategories[i].displayOrder = i;
-    }
+  const deleteIcon = async (categoryId: string, iconId: string) => {
+    if (!confirm('Are you sure you want to delete this icon?')) return;
 
     try {
-      // Update all categories' display orders
-      const updates = newCategories.map(cat => ({
-        id: cat.id,
-        displayOrder: cat.displayOrder,
-      }));
-
-      const response = await fetch(`/api/teams/${teamSlug}/categories/reorder`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categories: updates }),
+      const response = await fetch(`/api/teams/${teamSlug}/categories/${categoryId}/icons/${iconId}`, {
+        method: 'DELETE'
       });
 
       if (response.ok) {
-        setCategories(newCategories);
+        await loadCategories();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to delete icon');
       }
     } catch (error) {
-      console.error('Error reordering categories:', error);
+      console.error('Error deleting icon:', error);
+      alert('Error deleting icon');
     }
   };
 
-  const IconSelector = ({ 
-    value, 
-    onChange, 
-    isOpen, 
-    setIsOpen 
-  }: { 
-    value: string; 
-    onChange: (icon: string) => void;
-    isOpen: boolean;
-    setIsOpen: (open: boolean) => void;
-  }) => (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-start">
-          <span className="material-icons mr-2" style={{fontSize: '16px'}}>{value}</span>
-          {value}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0">
-        <Command>
-          <CommandInput placeholder="Search icons..." />
-          <CommandList>
-            <CommandEmpty>No icons found.</CommandEmpty>
-            <CommandGroup>
-              {MATERIAL_ICONS.map((icon) => (
-                <CommandItem
-                  key={icon}
-                  value={icon}
-                  onSelect={() => {
-                    onChange(icon);
-                    setIsOpen(false);
-                  }}
-                >
-                  <span className="material-icons mr-2" style={{fontSize: '16px'}}>{icon}</span>
-                  {icon}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
+  const openCreateIcon = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setIsCreateIconOpen(true);
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Marker Categories</CardTitle>
         <CardDescription>
-          Manage custom marker categories for your team toolbar. Categories define the types of markers available for placement.
+          Manage your team&apos;s marker categories and icons. Create categories like &quot;Areas&quot;, &quot;Devices&quot;, &quot;Assets&quot;, then add multiple icons to each category.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-medium">Current Categories</h4>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <span className="material-icons mr-2" style={{fontSize: '16px'}}>add</span>
-              Add Category
-            </Button>
-          </div>
-
-          {categories.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No categories configured. Add your first category to get started.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Icon</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Background</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category, index) => {
-                  const bgColor = BACKGROUND_COLORS.find(bg => bg.value === category.backgroundColor);
-                  return (
-                    <TableRow key={category.id}>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => moveCategory(category.id, 'up')}
-                            disabled={index === 0}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>keyboard_arrow_up</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => moveCategory(category.id, 'down')}
-                            disabled={index === categories.length - 1}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>keyboard_arrow_down</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="material-icons" style={{fontSize: '16px'}}>{category.icon}</span>
-                      </TableCell>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border"
-                            style={{backgroundColor: bgColor?.preview || '#f3f4f6'}}
-                          />
-                          {bgColor?.label || category.backgroundColor}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleEditCategory(category)}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteCategory(category.id)}
-                          >
-                            <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+      <CardContent className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-medium">Categories</h4>
+          <Button onClick={() => setIsCreateCategoryOpen(true)}>
+            <span className="material-icons mr-2" style={{fontSize: '16px'}}>add</span>
+            Add Category
+          </Button>
         </div>
 
-        {/* Add Category Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        {categories.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <span className="material-icons mb-2" style={{fontSize: '48px'}}>category</span>
+            <p>No categories yet. Create your first category to get started!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {categories.map((category) => (
+              <Card key={category.id} className="border">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openCreateIcon(category.id)}
+                      >
+                        <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
+                        Add Icon
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => deleteCategory(category.id)}
+                      >
+                        <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {category.icons.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No icons in this category</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Icon</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Background</TableHead>
+                          <TableHead>Numbered</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {category.icons.map((icon) => (
+                          <TableRow key={icon.id}>
+                            <TableCell>
+                              <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center border-2"
+                                style={{
+                                  backgroundColor: icon.backgroundColor === 'dark' ? '#1f2937' : '#f3f4f6',
+                                  borderColor: '#e5e7eb',
+                                  color: icon.backgroundColor === 'dark' ? 'white' : '#1f2937'
+                                }}
+                              >
+                                <span className="material-icons" style={{fontSize: '16px'}}>
+                                  {icon.icon}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{icon.name}</TableCell>
+                            <TableCell>
+                              <span className="capitalize">{icon.backgroundColor}</span>
+                            </TableCell>
+                            <TableCell>
+                              {icon.isNumbered ? 'Yes' : 'No'}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => deleteIcon(category.id, icon.id)}
+                              >
+                                <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Create Category Dialog */}
+        <Dialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Category</DialogTitle>
+              <DialogTitle>Create New Category</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-name">Category Name</Label>
+                <Label htmlFor="category-name">Category Name</Label>
                 <Input
-                  id="new-name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g., Sensors, Equipment, Hazards"
+                  id="category-name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g., Areas, Devices, Assets"
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <IconSelector
-                  value={newIcon}
-                  onChange={setNewIcon}
-                  isOpen={isIconPopoverOpen}
-                  setIsOpen={setIsIconPopoverOpen}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Background Color</Label>
-                <Select value={newBackgroundColor} onValueChange={setNewBackgroundColor}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BACKGROUND_COLORS.map((bg) => (
-                      <SelectItem key={bg.value} value={bg.value}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border"
-                            style={{backgroundColor: bg.preview}}
-                          />
-                          {bg.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Categories group related marker types together in the toolbar
+                </p>
               </div>
             </div>
+            
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsCreateCategoryOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddCategory}>Add Category</Button>
+              <Button onClick={createCategory}>
+                Create Category
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Edit Category Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        {/* Create Icon Dialog */}
+        <Dialog open={isCreateIconOpen} onOpenChange={setIsCreateIconOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Category</DialogTitle>
+              <DialogTitle>Add Icon to Category</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Category Name</Label>
+                <Label htmlFor="icon-name">Icon Name</Label>
                 <Input
-                  id="edit-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <IconSelector
-                  value={editIcon}
-                  onChange={setEditIcon}
-                  isOpen={isEditIconPopoverOpen}
-                  setIsOpen={setIsEditIconPopoverOpen}
+                  id="icon-name"
+                  value={newIconName}
+                  onChange={(e) => setNewIconName(e.target.value)}
+                  placeholder="e.g., Sensor, Router, Building"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Background Color</Label>
-                <Select value={editBackgroundColor} onValueChange={setEditBackgroundColor}>
+                <Label>Material Icon</Label>
+                <Popover open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <div className="flex items-center gap-2">
+                        {newIconIcon && (
+                          <span className="material-icons" style={{fontSize: '16px'}}>
+                            {newIconIcon}
+                          </span>
+                        )}
+                        <span>{newIconIcon || 'Select an icon'}</span>
+                      </div>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0">
+                    <Command>
+                      <CommandInput placeholder="Search icons..." />
+                      <CommandList>
+                        <CommandEmpty>No icons found.</CommandEmpty>
+                        <CommandGroup>
+                          {MATERIAL_ICONS.map((icon) => (
+                            <CommandItem
+                              key={icon}
+                              value={icon}
+                              onSelect={() => {
+                                setNewIconIcon(icon);
+                                setIsIconPickerOpen(false);
+                              }}
+                            >
+                              <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                                {icon}
+                              </span>
+                              {icon}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="icon-background">Background Color</Label>
+                <Select value={newIconBackground} onValueChange={setNewIconBackground}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BACKGROUND_COLORS.map((bg) => (
-                      <SelectItem key={bg.value} value={bg.value}>
+                    {BACKGROUND_COLORS.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
                         <div className="flex items-center gap-2">
                           <div 
-                            className="w-4 h-4 rounded border"
-                            style={{backgroundColor: bg.preview}}
+                            className="w-4 h-4 rounded border" 
+                            style={{ backgroundColor: color.preview }}
                           />
-                          {bg.label}
+                          {color.label}
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-numbered"
+                  checked={newIconIsNumbered}
+                  onCheckedChange={setNewIconIsNumbered}
+                />
+                <Label htmlFor="is-numbered">Show numbers (1-10)</Label>
+                <p className="text-xs text-muted-foreground">
+                  For area markers that need numbers like &quot;Area 1&quot;, &quot;Area 2&quot;, etc.
+                </p>
+              </div>
             </div>
+            
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsCreateIconOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleUpdateCategory}>Save Changes</Button>
+              <Button onClick={createIcon}>
+                Add Icon
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
