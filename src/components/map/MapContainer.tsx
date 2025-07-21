@@ -891,6 +891,10 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       }
       
       await performDeleteMarker(markerId);
+    } catch (error) {
+      console.error('Error in deleteMarker:', error);
+      showAlert('Error', 'Error deleting marker. Please try again.');
+    }
   };
 
   const performDeleteMarker = async (markerId: string) => {
