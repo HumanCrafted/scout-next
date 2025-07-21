@@ -2080,7 +2080,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       </div>
 
       {/* Right Pin Toolbar - Dynamic Categories with Icons */}
-      <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-2 rounded-lg border border-border shadow-lg w-[95px] max-w-[95px]">
+      <div className="right-sidebar fixed top-3 right-3 z-[1000] bg-white p-3 rounded-lg border border-border shadow-lg">
         {categoriesLoading ? (
           <div className="text-center text-xs text-muted-foreground p-2">
             <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
@@ -2111,9 +2111,9 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             };
 
             return (
-              <div key={category.id} className="mb-4">
+              <div key={category.id} className="mb-3">
                 <h4 className="text-xs font-medium mb-2 text-muted-foreground">{category.name}</h4>
-                <div className="flex flex-wrap gap-1 justify-start">
+                <div className="grid grid-cols-2 gap-2">
                   {category.icons && category.icons.length > 0 ? (
                     category.icons.map((icon) => {
                       // Handle numbered icons (show 1-10)
@@ -2121,7 +2121,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                         return [1,2,3,4,5,6,7,8,9,10].map(num => (
                           <div
                             key={`${icon.id}-${num}`}
-                            className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
+                            className={`w-9 h-9 border-2 border-border rounded-full cursor-grab flex items-center justify-center text-xs font-bold transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
                             draggable={true}
                             title={`${icon.name} ${num}`}
                             onDragStart={(e) => {
@@ -2147,7 +2147,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                         return (
                           <div
                             key={icon.id}
-                            className={`w-8 h-8 border-2 border-border rounded-full cursor-grab flex items-center justify-center transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
+                            className={`w-9 h-9 border-2 border-border rounded-full cursor-grab flex items-center justify-center transition-all hover:opacity-80 hover:scale-105 active:cursor-grabbing ${getBgClass(icon.backgroundColor)}`}
                             draggable={true}
                             title={icon.name}
                             onDragStart={(e) => {
