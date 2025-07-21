@@ -307,9 +307,21 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                               <div 
                                 className="w-8 h-8 rounded-full flex items-center justify-center border-2"
                                 style={{
-                                  backgroundColor: icon.backgroundColor === 'dark' ? '#1f2937' : '#f3f4f6',
+                                  backgroundColor: (() => {
+                                    switch (icon.backgroundColor) {
+                                      case 'dark': return '#1f2937';
+                                      case 'light': return '#f3f4f6';
+                                      case 'blue': return 'rgb(59, 130, 246)';
+                                      case 'green': return 'rgb(16, 185, 129)';
+                                      case 'red': return 'rgb(239, 68, 68)';
+                                      case 'yellow': return 'rgb(245, 158, 11)';
+                                      case 'purple': return 'rgb(139, 92, 246)';
+                                      case 'orange': return 'rgb(249, 115, 22)';
+                                      default: return '#f3f4f6';
+                                    }
+                                  })(),
                                   borderColor: '#e5e7eb',
-                                  color: icon.backgroundColor === 'dark' ? 'white' : '#1f2937'
+                                  color: ['dark', 'blue', 'green', 'red', 'yellow', 'purple', 'orange'].includes(icon.backgroundColor) ? 'white' : '#1f2937'
                                 }}
                               >
                                 <span className="material-icons" style={{fontSize: '16px'}}>
@@ -419,26 +431,28 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                   <PopoverContent className="w-80 p-0">
                     <Command>
                       <CommandInput placeholder="Search icons..." />
-                      <CommandList className="max-h-60 overflow-y-auto">
-                        <CommandEmpty>No icons found.</CommandEmpty>
-                        <CommandGroup>
-                          {MATERIAL_ICONS.map((icon) => (
-                            <CommandItem
-                              key={icon}
-                              value={icon}
-                              onSelect={() => {
-                                setNewIconIcon(icon);
-                                setIsIconPickerOpen(false);
-                              }}
-                            >
-                              <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                      <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+                        <CommandList>
+                          <CommandEmpty>No icons found.</CommandEmpty>
+                          <CommandGroup>
+                            {MATERIAL_ICONS.map((icon) => (
+                              <CommandItem
+                                key={icon}
+                                value={icon}
+                                onSelect={() => {
+                                  setNewIconIcon(icon);
+                                  setIsIconPickerOpen(false);
+                                }}
+                              >
+                                <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                                  {icon}
+                                </span>
                                 {icon}
-                              </span>
-                              {icon}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </div>
                     </Command>
                   </PopoverContent>
                 </Popover>
@@ -515,26 +529,28 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                   <PopoverContent className="w-80 p-0">
                     <Command>
                       <CommandInput placeholder="Search icons..." />
-                      <CommandList className="max-h-60 overflow-y-auto">
-                        <CommandEmpty>No icons found.</CommandEmpty>
-                        <CommandGroup>
-                          {MATERIAL_ICONS.map((icon) => (
-                            <CommandItem
-                              key={icon}
-                              value={icon}
-                              onSelect={() => {
-                                setEditIconIcon(icon);
-                                setIsEditIconPickerOpen(false);
-                              }}
-                            >
-                              <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                      <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+                        <CommandList>
+                          <CommandEmpty>No icons found.</CommandEmpty>
+                          <CommandGroup>
+                            {MATERIAL_ICONS.map((icon) => (
+                              <CommandItem
+                                key={icon}
+                                value={icon}
+                                onSelect={() => {
+                                  setEditIconIcon(icon);
+                                  setIsEditIconPickerOpen(false);
+                                }}
+                              >
+                                <span className="material-icons mr-2" style={{fontSize: '16px'}}>
+                                  {icon}
+                                </span>
                                 {icon}
-                              </span>
-                              {icon}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </div>
                     </Command>
                   </PopoverContent>
                 </Popover>

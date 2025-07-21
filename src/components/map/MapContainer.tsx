@@ -354,30 +354,35 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         // Use categoryIcon data for styling
         const categoryIcon = marker.categoryIcon;
         
-        if (categoryIcon.backgroundColor === 'dark') {
-          el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          el.style.color = 'hsl(210 40% 98%)';
-          
-          // Check if this is a numbered marker (contains number in label)
-          const numberMatch = marker.label.match(/(\d+)$/);
-          if (numberMatch && categoryIcon.isNumbered) {
-            el.textContent = numberMatch[1];
-          } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${categoryIcon.icon}</span>`;
+        const getMarkerBackgroundColor = (bgColor: string) => {
+          switch (bgColor) {
+            case 'dark': return { bg: 'hsl(222.2 84% 4.9%)', text: 'hsl(210 40% 98%)', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'light': return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'blue': return { bg: 'rgb(59, 130, 246)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'green': return { bg: 'rgb(16, 185, 129)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'red': return { bg: 'rgb(239, 68, 68)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'yellow': return { bg: 'rgb(245, 158, 11)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'purple': return { bg: 'rgb(139, 92, 246)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'orange': return { bg: 'rgb(249, 115, 22)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            default: return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
           }
+        };
+        
+        const colors = getMarkerBackgroundColor(categoryIcon.backgroundColor);
+        el.style.backgroundColor = colors.bg;
+        el.style.color = colors.text;
+        el.style.borderColor = colors.border;
+        
+        // Check if this is a numbered marker (contains number in label)
+        const numberMatch = marker.label.match(/(\d+)$/);
+        if (numberMatch && categoryIcon.isNumbered) {
+          el.textContent = numberMatch[1];
+        } else if (categoryIcon.icon === 'solar-panel') {
+          el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: ${colors.text};">
+            <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+          </svg>`;
         } else {
-          // Light background
-          el.style.backgroundColor = 'rgb(243, 243, 243)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          
-          if (categoryIcon.icon === 'solar-panel') {
-            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
-              <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
-            </svg>`;
-          } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${categoryIcon.icon}</span>`;
-          }
+          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
         }
       } else {
         // Fallback for legacy markers without categoryIcon
@@ -1174,30 +1179,35 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         `;
         
         // Set background color and content based on category icon
-        if (categoryIcon.backgroundColor === 'dark') {
-          el.style.backgroundColor = 'hsl(222.2 84% 4.9%)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          el.style.color = 'hsl(210 40% 98%)';
-          
-          // Check if this is a numbered marker (contains number in label)
-          const numberMatch = label.match(/(\d+)$/);
-          if (numberMatch && categoryIcon.isNumbered) {
-            el.textContent = numberMatch[1];
-          } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px;">${categoryIcon.icon}</span>`;
+        const getMarkerBackgroundColor = (bgColor: string) => {
+          switch (bgColor) {
+            case 'dark': return { bg: 'hsl(222.2 84% 4.9%)', text: 'hsl(210 40% 98%)', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'light': return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'blue': return { bg: 'rgb(59, 130, 246)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'green': return { bg: 'rgb(16, 185, 129)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'red': return { bg: 'rgb(239, 68, 68)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'yellow': return { bg: 'rgb(245, 158, 11)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'purple': return { bg: 'rgb(139, 92, 246)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            case 'orange': return { bg: 'rgb(249, 115, 22)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+            default: return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
           }
+        };
+        
+        const colors = getMarkerBackgroundColor(categoryIcon.backgroundColor);
+        el.style.backgroundColor = colors.bg;
+        el.style.color = colors.text;
+        el.style.borderColor = colors.border;
+        
+        // Check if this is a numbered marker (contains number in label)
+        const numberMatch = label.match(/(\d+)$/);
+        if (numberMatch && categoryIcon.isNumbered) {
+          el.textContent = numberMatch[1];
+        } else if (categoryIcon.icon === 'solar-panel') {
+          el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: ${colors.text};">
+            <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
+          </svg>`;
         } else {
-          // Light background
-          el.style.backgroundColor = 'rgb(243, 243, 243)';
-          el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-          
-          if (categoryIcon.icon === 'solar-panel') {
-            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: hsl(222.2 84% 4.9%);">
-              <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
-            </svg>`;
-          } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${categoryIcon.icon}</span>`;
-          }
+          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
         }
         
         // Create popup with slot styling - marker sits inside left rounded end
