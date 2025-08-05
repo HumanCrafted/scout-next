@@ -373,9 +373,46 @@ Comprehensive fixes based on user feedback:
 - **Error Handling**: Enhanced validation and user feedback
 - **Legacy Data Migration**: Scripts to fix malformed marker labels
 
+### 🎨 Advanced User Experience & Icon System (v3.4) - 2025-08-05
+Enhanced marker functionality and modern icon system:
+
+#### **Individual Marker Background Colors**
+- **Database Enhancement**: Added `backgroundColor` field to Marker model with migration
+- **Real-time Color Editing**: Edit dialog with 8-color palette for instant marker customization
+- **Individual Overrides**: Each marker can have unique background color, independent of category defaults
+- **Live Visual Updates**: Color changes apply instantly on map without page refresh
+- **API Integration**: Marker update endpoint supports background color modifications
+
+#### **Advanced Marker Visibility System**
+- **Hide/Show Functionality**: Toggle marker visibility on map while keeping in sidebar
+- **Database Field**: Added `hidden` boolean field to Marker model with migration
+- **Smart Rendering**: Hidden markers filtered from map display and bounds calculations
+- **Visual Indicators**: Hidden markers shown with italic text and "(hidden)" label in sidebar
+- **Instant Toggle**: Eye icon buttons for immediate hide/show with real-time DOM updates
+- **Complete Functionality**: All marker operations (edit, delete, lock) work on hidden markers
+
+#### **Material Symbols Migration**
+- **Modern Icon System**: Migrated entire application from legacy Material Icons to Material Symbols
+- **Filled Icon Style**: Configured Material Symbols with filled variation for better visual weight
+- **Enhanced Compatibility**: Icon names from Google's website now work directly in application
+- **Expanded Library**: Access to 2,800+ Material Symbols vs 1,100 legacy Material Icons
+- **CSS Font Variations**: Proper `font-variation-settings` for consistent filled rendering
+- **Future-Proof**: Aligned with Google's current and actively maintained icon system
+
+#### **Technical Improvements**
+- **Database Migrations**: Clean migration scripts for new marker fields (`backgroundColor`, `hidden`)
+- **API Enhancements**: Updated marker endpoints to handle new visibility and color fields
+- **Real-time Updates**: Instant visual feedback for all marker modifications
+- **Component Updates**: All UI components updated to use Material Symbols classes
+- **Build Optimization**: Successful compilation with minimal linting warnings
+
+## Development Roadmap
+
+For current development priorities and upcoming features, see [ROADMAP.md](docs/ROADMAP.md).
+
 ---
-*Last updated: 2025-07-21*
-*Scout v3.3 - Professional industrial sensor mapping application with admin dashboard*
-*Built with Next.js 15.4.2, Vercel Postgres, and shadcn/ui*
-*Features: Team workspaces, custom marker categories, admin system, and comprehensive analytics*
-*Deployed on Vercel with full database persistence and real-time auto-save*
+*Last updated: 2025-08-05*
+*Scout v3.4 - Professional industrial sensor mapping application*
+*Built with Next.js 15.4.2, Vercel Postgres, shadcn/ui, and Material Symbols*
+*Features: Individual marker customization, advanced visibility controls, modern icon system*
+*Deployed on Vercel with full database persistence and real-time updates*
