@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@/generated/prisma';
 
@@ -10,7 +10,7 @@ async function verifyAdminAuth(): Promise<boolean> {
   return !!sessionToken;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Verify admin authentication
     if (!(await verifyAdminAuth())) {

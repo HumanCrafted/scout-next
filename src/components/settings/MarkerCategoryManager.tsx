@@ -380,14 +380,14 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
         <div className="flex justify-between items-center">
           <h4 className="text-sm font-medium">Categories</h4>
           <Button onClick={() => setIsCreateCategoryOpen(true)}>
-            <span className="material-icons mr-2" style={{fontSize: '16px'}}>add</span>
+            <span className="material-symbols-rounded mr-2" style={{fontSize: '16px'}}>add</span>
             Add Category
           </Button>
         </div>
 
         {categories.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <span className="material-icons mb-2" style={{fontSize: '48px'}}>category</span>
+            <span className="material-symbols-rounded mb-2" style={{fontSize: '48px'}}>category</span>
             <p>No categories yet. Create your first category to get started!</p>
           </div>
         ) : (
@@ -414,7 +414,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                             onClick={() => openEditCategory(category)}
                             title="Edit category name"
                           >
-                            <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                            <span className="material-symbols-rounded" style={{fontSize: '14px'}}>edit</span>
                           </Button>
                         </>
                       ) : (
@@ -424,7 +424,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                             size="sm"
                             onClick={() => openCreateIcon(category.id)}
                           >
-                            <span className="material-icons mr-1" style={{fontSize: '14px'}}>add</span>
+                            <span className="material-symbols-rounded mr-1" style={{fontSize: '14px'}}>add</span>
                             Add Icon
                           </Button>
                           <Button 
@@ -433,14 +433,14 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                             onClick={() => openEditCategory(category)}
                             title="Edit category name"
                           >
-                            <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                            <span className="material-symbols-rounded" style={{fontSize: '14px'}}>edit</span>
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => deleteCategory(category.id)}
                           >
-                            <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                            <span className="material-symbols-rounded" style={{fontSize: '14px'}}>delete</span>
                           </Button>
                         </>
                       )}
@@ -487,7 +487,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                                 {icon.isNumbered ? (
                                   <span style={{ fontSize: '14px', fontWeight: 'bold' }}>1</span>
                                 ) : (
-                                  <span className="material-icons" style={{fontSize: '16px'}}>
+                                  <span className="material-symbols-rounded" style={{fontSize: '16px'}}>
                                     {icon.icon}
                                   </span>
                                 )}
@@ -508,14 +508,14 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                                       size="sm"
                                       onClick={() => openEditIcon(category.id, icon)}
                                     >
-                                      <span className="material-icons" style={{fontSize: '14px'}}>edit</span>
+                                      <span className="material-symbols-rounded" style={{fontSize: '14px'}}>edit</span>
                                     </Button>
                                     <Button 
                                       variant="outline" 
                                       size="sm"
                                       onClick={() => deleteIcon(category.id, icon.id)}
                                     >
-                                      <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                                      <span className="material-symbols-rounded" style={{fontSize: '14px'}}>delete</span>
                                     </Button>
                                   </>
                                 )}
@@ -588,7 +588,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                 <div className="flex gap-2">
                   <div className="flex items-center justify-center w-10 h-10 border rounded bg-muted">
                     {newIconIcon ? (
-                      <span className="material-icons" style={{fontSize: '16px'}}>
+                      <span className="material-symbols-rounded" style={{fontSize: '16px'}}>
                         {newIconIcon}
                       </span>
                     ) : (
@@ -599,12 +599,12 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                     id="icon-name-input"
                     value={newIconIcon}
                     onChange={(e) => setNewIconIcon(e.target.value)}
-                    placeholder="e.g., memory, wifi, build, power"
+                    placeholder="e.g., memory, wifi, construction, power"
                     className="flex-1"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter any Material Icons name from{' '}
+                  Enter any Material Symbols name from{' '}
                   <a 
                     href="https://fonts.google.com/icons" 
                     target="_blank" 
@@ -674,7 +674,7 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                 <div className="flex gap-2">
                   <div className="flex items-center justify-center w-10 h-10 border rounded bg-muted">
                     {editIconIcon ? (
-                      <span className="material-icons" style={{fontSize: '16px'}}>
+                      <span className="material-symbols-rounded" style={{fontSize: '16px'}}>
                         {editIconIcon}
                       </span>
                     ) : (
@@ -685,12 +685,12 @@ export default function MarkerCategoryManager({ teamSlug }: MarkerCategoryManage
                     id="edit-icon-name-input"
                     value={editIconIcon}
                     onChange={(e) => setEditIconIcon(e.target.value)}
-                    placeholder="e.g., memory, wifi, build, power"
+                    placeholder="e.g., memory, wifi, construction, power"
                     className="flex-1"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter any Material Icons name from{' '}
+                  Enter any Material Symbols name from{' '}
                   <a 
                     href="https://fonts.google.com/icons" 
                     target="_blank" 

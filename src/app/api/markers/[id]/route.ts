@@ -19,7 +19,9 @@ export async function PUT(
       locked, 
       parentId,
       position,
-      childPosition
+      childPosition,
+      backgroundColor,
+      hidden
     } = await request.json();
 
     // Verify marker exists
@@ -48,7 +50,9 @@ export async function PUT(
         ...(locked !== undefined && { locked }),
         ...(parentId !== undefined && { parentId }),
         ...(position !== undefined && { position }),
-        ...(childPosition !== undefined && { childPosition })
+        ...(childPosition !== undefined && { childPosition }),
+        ...(backgroundColor !== undefined && { backgroundColor }),
+        ...(hidden !== undefined && { hidden })
       }
     });
 

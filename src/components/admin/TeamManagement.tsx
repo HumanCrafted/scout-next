@@ -205,7 +205,7 @@ export function TeamManagement() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <div className="animate-spin material-icons text-2xl mb-2">refresh</div>
+          <div className="animate-spin material-symbols-rounded text-2xl mb-2">refresh</div>
           <p>Loading teams...</p>
         </CardContent>
       </Card>
@@ -226,7 +226,7 @@ export function TeamManagement() {
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center space-x-2">
-              <span className="material-icons text-sm">add</span>
+              <span className="material-symbols-rounded text-sm">add</span>
               <span>Create Team</span>
             </Button>
           </DialogTrigger>
@@ -302,7 +302,7 @@ export function TeamManagement() {
         <CardContent>
           {teams.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <span className="material-icons text-4xl mb-2">groups_off</span>
+              <span className="material-symbols-rounded text-4xl mb-2">groups_off</span>
               <p>No teams found</p>
             </div>
           ) : (
@@ -339,7 +339,7 @@ export function TeamManagement() {
                           onClick={() => openEditDialog(team)}
                           className="flex items-center space-x-1"
                         >
-                          <span className="material-icons text-xs">edit</span>
+                          <span className="material-symbols-rounded text-xs">edit</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -347,7 +347,7 @@ export function TeamManagement() {
                           onClick={() => openDeleteDialog(team)}
                           className="flex items-center space-x-1 text-destructive hover:text-destructive"
                         >
-                          <span className="material-icons text-xs">delete</span>
+                          <span className="material-symbols-rounded text-xs">delete</span>
                         </Button>
                       </div>
                     </TableCell>

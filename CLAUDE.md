@@ -33,7 +33,7 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 ### 📍 Advanced Custom Marker System
 - **Fully Customizable Categories**: Teams create their own marker categories and icons
 - **Multi-Icon Categories**: Each category (e.g., "Areas", "Devices", "Assets") can contain multiple icons
-- **Material Icons Integration**: 150+ Material Design icons available with searchable picker
+- **Material Icons Integration**: 1000+ Material Design icons available with text input and live preview
 - **Flexible Marker Types**:
   - **Areas**: Numbered 1-10 with dark background (renamed from "Locations" to avoid search pin confusion)
   - **Custom Categories**: Team-defined categories with multiple icon options
@@ -66,8 +66,9 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - Material Design icons (16px for markers, 12px for controls) for compact, intuitive controls
 - Consistent shadcn/ui theming throughout
 - **Screenshot mode**: Hides all UI elements and shows all labels for clean screenshots
-- **Professional modal dialogs**: Custom-styled edit dialogs with keyboard support
+- **Professional modal dialogs**: shadcn/ui-based dialogs throughout application
 - **Settings page**: Comprehensive team settings with marker category and icon management
+- **Admin dashboard**: Complete team management and analytics system
 
 ### 💾 Data Management
 - **Database-driven persistence**: All data stored in Vercel Postgres with real-time updates
@@ -77,6 +78,7 @@ Scout is a web-based industrial sensor mapping application built for mapping sen
 - **Export capabilities**: JSON export functionality for backup and migration
 - **Position-based ordering**: Database fields for drag-and-drop marker reordering
 - **Legacy support**: Backward compatibility with existing marker data
+- **Admin system**: Team management, analytics, and usage tracking
 
 ### 🏷️ Labels & Visualization
 - Toggle-able labels for all markers
@@ -109,26 +111,42 @@ scout-next/
 ├── src/
 │   ├── app/
 │   │   ├── api/                    # API routes for backend functionality
-│   │   │   ├── auth/               # Authentication endpoints
+│   │   │   ├── admin/              # Admin authentication and management
+│   │   │   ├── auth/               # Team authentication endpoints
 │   │   │   ├── maps/               # Map CRUD operations
 │   │   │   ├── markers/            # Marker CRUD operations
 │   │   │   └── teams/              # Team management
+│   │   ├── admin/                  # Admin dashboard pages
+│   │   │   ├── dashboard/          # Admin analytics and team management
+│   │   │   └── page.tsx            # Admin login page
 │   │   ├── [team]/                 # Dynamic team routes (e.g., /masen)
 │   │   ├── page.tsx                # Landing page
 │   │   ├── layout.tsx              # Root layout
 │   │   └── globals.css             # Global styles
 │   ├── components/
+│   │   ├── admin/                  # Admin dashboard components
+│   │   │   ├── Analytics.tsx       # Analytics dashboard
+│   │   │   └── TeamManagement.tsx  # Team CRUD interface
 │   │   ├── map/
 │   │   │   └── MapContainer.tsx    # Main map component
+│   │   ├── settings/               # Team settings components
 │   │   └── ui/                     # shadcn/ui components
 │   │       ├── button.tsx
 │   │       ├── dialog.tsx
 │   │       ├── input.tsx
-│   │       └── label.tsx
+│   │       ├── table.tsx
+│   │       ├── tabs.tsx
+│   │       ├── badge.tsx
+│   │       └── alert.tsx
 │   └── lib/
 │       ├── auth.ts                 # Authentication utilities
 │       ├── db.ts                   # Database connection
 │       └── utils.ts                # Shared utilities
+├── scripts/
+│   └── generate-admin-hash.js      # Admin password hash generator
+├── scout help/
+│   ├── Scout Help & Tutorial.md            # Original help documentation
+│   └── Scout Help & Tutorial - Updated.md  # Updated v3.2+ documentation
 ├── prisma/
 │   ├── schema.prisma               # Database schema
 │   ├── migrations/                 # Database migrations
@@ -182,6 +200,7 @@ Scout has evolved through several major phases:
 - **Database**: Vercel Postgres with Prisma ORM
 - **UI**: shadcn/ui with Radix primitives and Tailwind CSS
 - **Authentication**: Team-based login with bcrypt password hashing
+- **Admin System**: Secure admin dashboard with analytics
 - **Deployment**: Vercel with serverless architecture
 
 ### Key Features
@@ -190,15 +209,17 @@ Scout has evolved through several major phases:
 - **Professional UI**: Consistent shadcn/ui components throughout
 - **Team Workspaces**: URL-based team access with complete data isolation
 - **Real-time Persistence**: Auto-save to database with optimistic updates
+- **Admin Dashboard**: Team management, analytics, and usage tracking
 - **Mobile Responsive**: Touch-optimized interface design
 - **Screenshot Mode**: Clean fullscreen export functionality
 
 ### Technical Infrastructure
-- **API Routes**: RESTful endpoints with proper validation
+- **API Routes**: RESTful endpoints with proper validation and admin authentication
 - **Database Schema**: Normalized tables with relationships and indexes
 - **Component Architecture**: Modular React components with TypeScript
 - **State Management**: React hooks with optimistic updates
 - **Form Handling**: React Hook Form with Zod validation
+- **Admin Authentication**: Session-based admin system with bcrypt security
 
 ## Key Design Decisions
 
@@ -263,20 +284,35 @@ npm run lint
 
 ## Recent Updates
 
+### 🛠️ Admin System & Documentation Update (v3.3) - 2025-07-21
+Comprehensive admin dashboard and updated documentation:
+
+#### **Admin System Implementation**
+- **Secure Authentication**: bcrypt password hashing with session management
+- **Team CRUD Operations**: Complete team lifecycle management with validation
+- **Analytics Dashboard**: System overview, team statistics, and activity tracking
+- **Professional UI**: Full shadcn/ui integration with consistent design
+- **Usage Insights**: Popular categories, recent activity, and session tracking
+
+#### **Documentation Updates**
+- **Updated Help Guide**: Comprehensive tutorial reflecting all v3.2+ features
+- **Team Workspace Coverage**: Authentication, custom categories, auto-save
+- **Admin Features**: Team management and analytics documentation
+- **Enhanced Troubleshooting**: Updated for new database-driven architecture
+
 ### 🎨 Professional Dialog System & Icon Selection Enhancement (v3.2) - 2025-07-21
-Comprehensive UI standardization and improved user experience:
+UI standardization and improved user experience:
 
 #### **Enhanced Icon Selection System**
-- **Simplified Input**: Replaced dropdown with text input and live preview
-- **Full Material Icons Catalog**: Access to 1000+ icons with direct Google Fonts link
-- **Better Mobile Experience**: Simple input without scrolling limitations
-- **Fixed Scrolling Issues**: Resolved double scrollbar problems
+- **Simplified Input**: Text input with live preview (1000+ Material Icons)
+- **Better Mobile Experience**: No scrolling limitations, direct icon name entry
+- **Fixed Scrolling Issues**: Resolved dropdown scroll problems
 
 #### **Complete shadcn/ui Dialog Migration**
-- **Replaced 30+ Alerts**: All `alert()` and `confirm()` calls converted to professional dialogs
+- **Replaced 30+ Alerts**: Professional dialogs throughout application
 - **Color-Coded Types**: Red (error), orange (warning), green (success)
-- **Enhanced Error Messages**: Clear titles, detailed descriptions, actionable guidance
-- **Accessibility**: ESC key dismissal, focus management, screen reader support
+- **Enhanced Error Messages**: Clear guidance and actionable feedback
+- **Full Accessibility**: Keyboard navigation and screen reader support
 
 
 ### 🎨 Enhanced Settings & UI Improvements (v3.1) - 2025-07-21
@@ -339,6 +375,7 @@ Comprehensive fixes based on user feedback:
 
 ---
 *Last updated: 2025-07-21*
-*Scout v3.2 - Professional industrial sensor mapping application*
+*Scout v3.3 - Professional industrial sensor mapping application with admin dashboard*
 *Built with Next.js 15.4.2, Vercel Postgres, and shadcn/ui*
-*Deployed on Vercel with team-based authentication and custom marker categories*
+*Features: Team workspaces, custom marker categories, admin system, and comprehensive analytics*
+*Deployed on Vercel with full database persistence and real-time auto-save*

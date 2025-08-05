@@ -11,7 +11,7 @@ async function verifyAdminAuth(): Promise<boolean> {
   return !!sessionToken;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Verify admin authentication
     if (!(await verifyAdminAuth())) {

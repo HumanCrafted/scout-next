@@ -25,9 +25,11 @@ interface Marker {
   deviceIcon?: string;
   assetIcon?: string;
   locked?: boolean;
+  hidden?: boolean;
   parentId?: string | null;
   position?: number | null;
   childPosition?: number | null;
+  backgroundColor?: string | null;
   children?: Marker[];
 }
 
@@ -77,6 +79,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const [editMarkerName, setEditMarkerName] = useState('');
   const [editMarkerLat, setEditMarkerLat] = useState('');
   const [editMarkerLng, setEditMarkerLng] = useState('');
+  const [editMarkerBackgroundColor, setEditMarkerBackgroundColor] = useState<string>('light');
 
   // Alert and confirmation dialog state
   const [alertDialog, setAlertDialog] = useState<{
@@ -330,11 +333,12 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
 
   // Fit map to show all markers with padding
   const fitMapToMarkers = (markers: Marker[]) => {
-    if (!map.current || markers.length === 0) return;
+    const visibleMarkers = markers.filter(marker => !marker.hidden);
+    if (!map.current || visibleMarkers.length === 0) return;
     
-    if (markers.length === 1) {
+    if (visibleMarkers.length === 1) {
       // For single marker, center on it with a reasonable zoom
-      const marker = markers[0];
+      const marker = visibleMarkers[0];
       map.current.flyTo({
         center: [marker.lng, marker.lat],
         zoom: 14,
@@ -343,13 +347,13 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       return;
     }
     
-    // Calculate bounds for multiple markers
-    let minLng = markers[0].lng;
-    let maxLng = markers[0].lng;
-    let minLat = markers[0].lat;
-    let maxLat = markers[0].lat;
+    // Calculate bounds for multiple visible markers
+    let minLng = visibleMarkers[0].lng;
+    let maxLng = visibleMarkers[0].lng;
+    let minLat = visibleMarkers[0].lat;
+    let maxLat = visibleMarkers[0].lat;
     
-    markers.forEach(marker => {
+    visibleMarkers.forEach(marker => {
       minLng = Math.min(minLng, marker.lng);
       maxLng = Math.max(maxLng, marker.lng);
       minLat = Math.min(minLat, marker.lat);
@@ -370,7 +374,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const renderExistingMarkers = (markers: Marker[]) => {
     if (!map.current) return;
     
-    markers.forEach(marker => {
+    markers.filter(marker => !marker.hidden).forEach(marker => {
       // Create custom marker element based on type
       const el = document.createElement('div');
       el.className = `custom-marker ${marker.type}`;
@@ -394,7 +398,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         // Search result pin - use location_on icon like v1
         el.style.backgroundColor = 'rgb(243, 243, 243)';
         el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-        el.innerHTML = '<span class="material-icons" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
+        el.innerHTML = '<span class="material-symbols-rounded" style="font-size: 20px; color: hsl(222.2 84% 4.9%);">location_on</span>';
       } else if (marker.categoryIcon) {
         // Use categoryIcon data for styling
         const categoryIcon = marker.categoryIcon;
@@ -413,7 +417,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           }
         };
         
-        const colors = getMarkerBackgroundColor(categoryIcon.backgroundColor);
+        const colors = getMarkerBackgroundColor(marker.backgroundColor || categoryIcon.backgroundColor);
         el.style.backgroundColor = colors.bg;
         el.style.color = colors.text;
         el.style.borderColor = colors.border;
@@ -427,7 +431,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
           </svg>`;
         } else {
-          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
+          el.innerHTML = `<span class="material-symbols-rounded" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
         }
       } else {
         // Fallback for legacy markers without categoryIcon
@@ -446,13 +450,13 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
               <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
             </svg>`;
           } else {
-            el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+            el.innerHTML = `<span class="material-symbols-rounded" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
           }
         } else if (marker.type === 'assets') {
           el.style.backgroundColor = 'rgb(243, 243, 243)';
           el.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
           const icon = marker.assetIcon || 'build';
-          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
+          el.innerHTML = `<span class="material-symbols-rounded" style="font-size: 16px; color: hsl(222.2 84% 4.9%);">${icon}</span>`;
         }
       }
       
@@ -671,7 +675,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   };
 
   // Clear all markers
-  const clearMarkers = async () => {
+  /* const clearMarkers = async () => {
     if (markers.length === 0) return;
     
     showConfirm(
@@ -681,9 +685,9 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
       'Clear All',
       'Cancel'
     );
-  };
+  }; */
 
-  const performClearMarkers = async () => {
+  /* const performClearMarkers = async () => {
       try {
         // Delete all markers from database
         for (const marker of markers) {
@@ -700,7 +704,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
         console.error('Error clearing markers:', error);
         showAlert('Error', 'Error clearing markers. Please try again.');
       }
-  };
+  }; */
 
   // Delete a map
   const deleteMap = async (mapId: string) => {
@@ -876,7 +880,6 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
   const deleteMarker = async (markerId: string) => {
     try {
       // Check if this marker has children
-      const markerToDelete = markers.find(m => m.id === markerId);
       const children = getChildMarkers(markers, markerId);
       
       if (children.length > 0) {
@@ -899,7 +902,6 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
 
   const performDeleteMarker = async (markerId: string) => {
     try {
-      const markerToDelete = markers.find(m => m.id === markerId);
       const children = getChildMarkers(markers, markerId);
 
       const response = await fetch(`/api/markers/${markerId}`, {
@@ -1065,12 +1067,82 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
     }
   };
 
+  // Toggle marker visibility (hide/show on map)
+  const toggleMarkerVisibility = async (markerId: string) => {
+    try {
+      const marker = markers.find(m => m.id === markerId);
+      if (!marker) return;
+      
+      const newHiddenState = !marker.hidden;
+      
+      // Update in database
+      const response = await fetch(`/api/markers/${markerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hidden: newHiddenState,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMarkers(prev => prev.map(m => 
+          m.id === markerId 
+            ? { ...m, hidden: newHiddenState }
+            : m
+        ));
+        
+        // Update maps state
+        setMaps(prev => prev.map(m => 
+          m.isActive 
+            ? { 
+                ...m, 
+                markers: m.markers.map(marker => 
+                  marker.id === markerId 
+                    ? { ...marker, hidden: newHiddenState }
+                    : marker
+                )
+              }
+            : m
+        ));
+        
+        // Add or remove visual marker from map
+        const mapboxMarker = markersRef.current[markerId];
+        if (newHiddenState) {
+          // Hide marker: remove from map but keep reference
+          if (mapboxMarker) {
+            mapboxMarker.remove();
+          }
+        } else {
+          // Show marker: re-add to map
+          if (mapboxMarker) {
+            mapboxMarker.addTo(map.current!);
+          } else {
+            // Re-render the specific marker if reference was lost
+            const updatedMarker = markers.find(m => m.id === markerId);
+            if (updatedMarker) {
+              renderExistingMarkers([{ ...updatedMarker, hidden: false }]);
+            }
+          }
+        }
+      } else {
+        showAlert('Error', 'Error toggling marker visibility. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling marker visibility:', error);
+      showAlert('Error', 'Error toggling marker visibility. Please try again.');
+    }
+  };
+
   // Edit marker
   const editMarker = (marker: Marker) => {
     setEditingMarker(marker);
     setEditMarkerName(marker.label);
     setEditMarkerLat(marker.lat.toString());
     setEditMarkerLng(marker.lng.toString());
+    setEditMarkerBackgroundColor(marker.backgroundColor || marker.categoryIcon?.backgroundColor || 'light');
     setIsEditMarkerModalOpen(true);
   };
 
@@ -1097,15 +1169,22 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           label: editMarkerName.trim(),
           lat,
           lng,
+          backgroundColor: editMarkerBackgroundColor,
         }),
       });
 
       if (response.ok) {
         // Update local state
+        const updatedMarker = { 
+          ...editingMarker, 
+          label: editMarkerName.trim(), 
+          lat, 
+          lng,
+          backgroundColor: editMarkerBackgroundColor
+        };
+        
         setMarkers(prev => prev.map(m => 
-          m.id === editingMarker.id 
-            ? { ...m, label: editMarkerName.trim(), lat, lng }
-            : m
+          m.id === editingMarker.id ? updatedMarker : m
         ));
         
         // Update maps state
@@ -1114,18 +1193,40 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             ? { 
                 ...m, 
                 markers: m.markers.map(marker => 
-                  marker.id === editingMarker.id 
-                    ? { ...marker, label: editMarkerName.trim(), lat, lng }
-                    : marker
+                  marker.id === editingMarker.id ? updatedMarker : marker
                 )
               }
             : m
         ));
         
-        // Update visual marker position
+        // Update visual marker position and styling
         const mapboxMarker = markersRef.current[editingMarker.id];
         if (mapboxMarker) {
           mapboxMarker.setLngLat([lng, lat]);
+          
+          // Update marker's visual styling with new background color
+          const markerElement = mapboxMarker.getElement();
+          if (markerElement && updatedMarker.categoryIcon) {
+            const getMarkerBackgroundColor = (bgColor: string) => {
+              switch (bgColor) {
+                case 'dark': return { bg: 'hsl(222.2 84% 4.9%)', text: 'hsl(210 40% 98%)', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'light': return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'blue': return { bg: 'rgb(59, 130, 246)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'green': return { bg: 'rgb(16, 185, 129)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'red': return { bg: 'rgb(239, 68, 68)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'yellow': return { bg: 'rgb(245, 158, 11)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'purple': return { bg: 'rgb(168, 85, 247)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                case 'orange': return { bg: 'rgb(249, 115, 22)', text: 'white', border: 'hsl(214.3 31.8% 91.4%)' };
+                default: return { bg: 'rgb(243, 243, 243)', text: 'hsl(222.2 84% 4.9%)', border: 'hsl(214.3 31.8% 91.4%)' };
+              }
+            };
+            
+            const colors = getMarkerBackgroundColor(updatedMarker.backgroundColor || updatedMarker.categoryIcon.backgroundColor);
+            markerElement.style.backgroundColor = colors.bg;
+            markerElement.style.color = colors.text;
+            markerElement.style.borderColor = colors.border;
+          }
+          
           // Update popup content
           const popup = mapboxMarker.getPopup();
           if (popup) {
@@ -1258,7 +1359,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
           }
         };
         
-        const colors = getMarkerBackgroundColor(categoryIcon.backgroundColor);
+        const colors = getMarkerBackgroundColor(marker.backgroundColor || categoryIcon.backgroundColor);
         el.style.backgroundColor = colors.bg;
         el.style.color = colors.text;
         el.style.borderColor = colors.border;
@@ -1272,7 +1373,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             <path d="M4,2H20A2,2 0 0,1 22,4V14A2,2 0 0,1 20,16H15V20H18V22H13V16H11V22H6V20H9V16H4A2,2 0 0,1 2,14V4A2,2 0 0,1 4,2M4,4V8H11V4H4M4,14H11V10H4V14M20,14V10H13V14H20M20,4H13V8H20V4Z" />
           </svg>`;
         } else {
-          el.innerHTML = `<span class="material-icons" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
+          el.innerHTML = `<span class="material-symbols-rounded" style="font-size: 16px; color: ${colors.text};">${categoryIcon.icon}</span>`;
         }
         
         // Create popup with slot styling - marker sits inside left rounded end
@@ -1727,7 +1828,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
               onClick={startNewMap}
               title="Add new map"
             >
-              <span className="material-icons" style={{fontSize: '16px'}}>add_circle</span>
+              <span className="material-symbols-rounded" style={{fontSize: '16px'}}>add_circle</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -1741,11 +1842,11 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                       title={mapItem.isActive ? "Collapse markers" : "Switch to this map"}
                       onClick={() => mapItem.isActive ? null : switchToMap(mapItem.id)}
                     >
-                      <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
+                      <span className="material-symbols-rounded text-muted-foreground" style={{fontSize: '12px'}}>
                         {mapItem.isActive ? 'expand_more' : 'chevron_right'}
                       </span>
                     </button>
-                    <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '16px'}}>
+                    <span className="material-symbols-rounded mr-2 text-muted-foreground" style={{fontSize: '16px'}}>
                       map
                     </span>
                     <span 
@@ -1771,7 +1872,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                           deleteMap(mapItem.id);
                         }}
                       >
-                        <span className="material-icons" style={{fontSize: '14px'}}>delete</span>
+                        <span className="material-symbols-rounded" style={{fontSize: '14px'}}>delete</span>
                       </Button>
                     )}
                   </div>
@@ -1814,23 +1915,26 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                     onClick={() => toggleGroupCollapse(marker.id)}
                                     title={isCollapsed ? "Expand group" : "Collapse group"}
                                   >
-                                    <span className="material-icons text-muted-foreground" style={{fontSize: '12px'}}>
+                                    <span className="material-symbols-rounded text-muted-foreground" style={{fontSize: '12px'}}>
                                       {isCollapsed ? 'chevron_right' : 'expand_more'}
                                     </span>
                                   </button>
                                 )}
-                                <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                                <span className="material-symbols-rounded mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
                                   {marker.type === 'search' ? 'place' : 
                                    marker.categoryIcon ? marker.categoryIcon.icon :
                                    marker.type === 'location' ? 'location_on' :
                                    marker.type === 'device' ? 'memory' : 'build'}
                                 </span>
                                 <span 
-                                  className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                                  title="Click to center on marker"
+                                  className={`text-xs cursor-pointer hover:text-primary transition-colors truncate ${
+                                    marker.hidden ? 'text-muted-foreground italic' : 'text-foreground'
+                                  }`}
+                                  title={marker.hidden ? "Marker hidden from map - Click to center" : "Click to center on marker"}
                                   onClick={() => centerOnMarker(marker)}
                                 >
                                   {marker.label}
+                                  {marker.hidden && <span className="ml-1 text-xs opacity-60">(hidden)</span>}
                                 </span>
                                 {hasChildren && (
                                   <span className="ml-1 text-xs text-muted-foreground">({children.length})</span>
@@ -1841,10 +1945,21 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
+                                  title={marker.hidden ? 'Show marker on map' : 'Hide marker from map'}
+                                  onClick={() => toggleMarkerVisibility(marker.id)}
+                                >
+                                  <span className="material-symbols-rounded" style={{fontSize: '12px'}}>
+                                    {marker.hidden ? 'visibility_off' : 'visibility'}
+                                  </span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
                                   title={marker.locked ? 'Unlock marker' : 'Lock marker'}
                                   onClick={() => toggleMarkerLock(marker.id)}
                                 >
-                                  <span className="material-icons" style={{fontSize: '12px'}}>
+                                  <span className="material-symbols-rounded" style={{fontSize: '12px'}}>
                                     {marker.locked ? 'lock' : 'lock_open'}
                                   </span>
                                 </Button>
@@ -1855,7 +1970,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                   title="Edit marker"
                                   onClick={() => editMarker(marker)}
                                 >
-                                  <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                                  <span className="material-symbols-rounded" style={{fontSize: '12px'}}>edit</span>
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1864,7 +1979,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                   title="Delete marker"
                                   onClick={() => deleteMarker(marker.id)}
                                 >
-                                  <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                                  <span className="material-symbols-rounded" style={{fontSize: '12px'}}>delete</span>
                                 </Button>
                               </div>
                             </div>
@@ -1896,18 +2011,21 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                       onDragEnd={handleMarkerDragEnd}
                                     >
                                     <div className="flex items-center flex-1 min-w-0">
-                                      <span className="material-icons mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
+                                      <span className="material-symbols-rounded mr-2 text-muted-foreground" style={{fontSize: '14px'}}>
                                         {childMarker.type === 'search' ? 'place' : 
                                          childMarker.categoryIcon ? childMarker.categoryIcon.icon :
                                          childMarker.type === 'location' ? 'location_on' :
                                          childMarker.type === 'device' ? 'memory' : 'build'}
                                       </span>
                                       <span 
-                                        className="text-xs text-foreground cursor-pointer hover:text-primary transition-colors truncate"
-                                        title="Click to center on marker"
+                                        className={`text-xs cursor-pointer hover:text-primary transition-colors truncate ${
+                                          childMarker.hidden ? 'text-muted-foreground italic' : 'text-foreground'
+                                        }`}
+                                        title={childMarker.hidden ? "Marker hidden from map - Click to center" : "Click to center on marker"}
                                         onClick={() => centerOnMarker(childMarker)}
                                       >
                                         {childMarker.label}
+                                        {childMarker.hidden && <span className="ml-1 text-xs opacity-60">(hidden)</span>}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1918,7 +2036,18 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                         title="Ungroup marker"
                                         onClick={() => handleUngroupMarker(childMarker.id)}
                                       >
-                                        <span className="material-icons" style={{fontSize: '12px'}}>call_split</span>
+                                        <span className="material-symbols-rounded" style={{fontSize: '12px'}}>call_split</span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        title={childMarker.hidden ? 'Show marker on map' : 'Hide marker from map'}
+                                        onClick={() => toggleMarkerVisibility(childMarker.id)}
+                                      >
+                                        <span className="material-symbols-rounded" style={{fontSize: '12px'}}>
+                                          {childMarker.hidden ? 'visibility_off' : 'visibility'}
+                                        </span>
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -1927,7 +2056,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                         title={childMarker.locked ? 'Unlock marker' : 'Lock marker'}
                                         onClick={() => toggleMarkerLock(childMarker.id)}
                                       >
-                                        <span className="material-icons" style={{fontSize: '12px'}}>
+                                        <span className="material-symbols-rounded" style={{fontSize: '12px'}}>
                                           {childMarker.locked ? 'lock' : 'lock_open'}
                                         </span>
                                       </Button>
@@ -1938,7 +2067,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                         title="Edit marker"
                                         onClick={() => editMarker(childMarker)}
                                       >
-                                        <span className="material-icons" style={{fontSize: '12px'}}>edit</span>
+                                        <span className="material-symbols-rounded" style={{fontSize: '12px'}}>edit</span>
                                       </Button>
                                       <Button
                                         variant="ghost"
@@ -1947,7 +2076,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                                         title="Delete marker"
                                         onClick={() => deleteMarker(childMarker.id)}
                                       >
-                                        <span className="material-icons" style={{fontSize: '12px'}}>delete</span>
+                                        <span className="material-symbols-rounded" style={{fontSize: '12px'}}>delete</span>
                                       </Button>
                                     </div>
                                     </div>
@@ -2010,7 +2139,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
               }, 50);
             }}
           >
-            <span className="material-icons mr-3" style={{fontSize: '14px'}}>photo_camera</span>
+            <span className="material-symbols-rounded mr-3" style={{fontSize: '14px'}}>photo_camera</span>
             Screenshot Mode
           </button>
           <button 
@@ -2019,7 +2148,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             title="Settings"
             onClick={onOpenSettings}
           >
-            <span className="material-icons mr-3" style={{fontSize: '14px'}}>settings</span>
+            <span className="material-symbols-rounded mr-3" style={{fontSize: '14px'}}>settings</span>
             Settings
           </button>
           <button 
@@ -2028,7 +2157,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
             title="Help & Tutorial"
             onClick={() => window.open('https://masen.craft.me/scout-help', '_blank')}
           >
-            <span className="material-icons mr-3" style={{fontSize: '14px'}}>help</span>
+            <span className="material-symbols-rounded mr-3" style={{fontSize: '14px'}}>help</span>
             Help
           </button>
         </div>
@@ -2216,7 +2345,7 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                               setDraggedPinType(null);
                             }}
                           >
-                            <span className="material-icons" style={{fontSize: '16px'}}>{icon.icon}</span>
+                            <span className="material-symbols-rounded" style={{fontSize: '16px'}}>{icon.icon}</span>
                           </div>
                         );
                       }
@@ -2355,6 +2484,36 @@ export default function MapContainer({ teamName, onLogout, onOpenSettings }: Map
                   }
                 }}
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
+                Color
+              </Label>
+              <div className="col-span-3 flex gap-2 flex-wrap">
+                {[
+                  { name: 'light', preview: 'rgb(243, 243, 243)', textColor: 'black' },
+                  { name: 'dark', preview: 'hsl(222.2 84% 4.9%)', textColor: 'white' },
+                  { name: 'blue', preview: 'rgb(59, 130, 246)', textColor: 'white' },
+                  { name: 'green', preview: 'rgb(16, 185, 129)', textColor: 'white' },
+                  { name: 'red', preview: 'rgb(239, 68, 68)', textColor: 'white' },
+                  { name: 'yellow', preview: 'rgb(245, 158, 11)', textColor: 'white' },
+                  { name: 'purple', preview: 'rgb(168, 85, 247)', textColor: 'white' },
+                  { name: 'orange', preview: 'rgb(249, 115, 22)', textColor: 'white' }
+                ].map(color => (
+                  <button
+                    key={color.name}
+                    type="button"
+                    onClick={() => setEditMarkerBackgroundColor(color.name)}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      editMarkerBackgroundColor === color.name 
+                        ? 'border-primary scale-110' 
+                        : 'border-border hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color.preview }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

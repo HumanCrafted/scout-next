@@ -75,9 +75,11 @@ model Marker {
   deviceIcon    String?  // Legacy field, kept for backward compatibility
   assetIcon     String?  // Legacy field, kept for backward compatibility
   locked        Boolean  @default(false)
+  hidden        Boolean  @default(false) // Hide marker from map but keep in sidebar
   parentId      String?
   position      Int?     // Overall position in the map (for root markers)
   childPosition Int?     // Position within parent group (for child markers)
+  backgroundColor String? // Optional override for marker background color
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

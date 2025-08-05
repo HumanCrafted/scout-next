@@ -77,7 +77,7 @@ export function Analytics() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <div className="animate-spin material-icons text-2xl mb-2">refresh</div>
+          <div className="animate-spin material-symbols-rounded text-2xl mb-2">refresh</div>
           <p>Loading analytics...</p>
         </CardContent>
       </Card>
@@ -88,7 +88,7 @@ export function Analytics() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <span className="material-icons text-4xl mb-2 text-destructive">error</span>
+          <span className="material-symbols-rounded text-4xl mb-2 text-destructive">error</span>
           <p className="text-destructive">{error || 'Failed to load analytics'}</p>
         </CardContent>
       </Card>
@@ -110,7 +110,7 @@ export function Analytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Teams</CardTitle>
-            <span className="material-icons text-lg text-muted-foreground">groups</span>
+            <span className="material-symbols-rounded text-lg text-muted-foreground">groups</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.overview.totalTeams}</div>
@@ -121,7 +121,7 @@ export function Analytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Maps</CardTitle>
-            <span className="material-icons text-lg text-muted-foreground">map</span>
+            <span className="material-symbols-rounded text-lg text-muted-foreground">map</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.overview.totalMaps}</div>
@@ -132,7 +132,7 @@ export function Analytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Markers</CardTitle>
-            <span className="material-icons text-lg text-muted-foreground">place</span>
+            <span className="material-symbols-rounded text-lg text-muted-foreground">place</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.overview.totalMarkers}</div>
@@ -143,7 +143,7 @@ export function Analytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <span className="material-icons text-lg text-muted-foreground">category</span>
+            <span className="material-symbols-rounded text-lg text-muted-foreground">category</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.overview.totalCategories}</div>
@@ -154,7 +154,7 @@ export function Analytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
-            <span className="material-icons text-lg text-muted-foreground">online_prediction</span>
+            <span className="material-symbols-rounded text-lg text-muted-foreground">online_prediction</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.overview.activeSessions}</div>
@@ -240,7 +240,7 @@ export function Analytics() {
         <CardContent>
           {analytics.recentActivity.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <span className="material-icons text-4xl mb-2">history</span>
+              <span className="material-symbols-rounded text-4xl mb-2">history</span>
               <p>No recent activity</p>
             </div>
           ) : (

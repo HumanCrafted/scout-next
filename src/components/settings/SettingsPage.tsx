@@ -170,7 +170,7 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
         const error = await response.json();
         setPasswordError(error.message || 'Failed to change password');
       }
-    } catch (err) {
+    } catch {
       setPasswordError('An error occurred while changing password');
     }
   };
@@ -228,7 +228,7 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
             <p className="text-muted-foreground">Configure your Scout workspace preferences</p>
           </div>
           <Button variant="outline" onClick={onBack}>
-            <span className="material-icons mr-2">arrow_back</span>
+            <span className="material-symbols-rounded mr-2">arrow_back</span>
             Back to Map
           </Button>
         </div>
@@ -400,7 +400,7 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
               variant="outline" 
               onClick={() => setIsChangePasswordOpen(true)}
             >
-              <span className="material-icons mr-2">lock</span>
+              <span className="material-symbols-rounded mr-2">lock</span>
               Change Team Password
             </Button>
           </CardContent>
@@ -415,11 +415,11 @@ export default function SettingsPage({ teamSlug, onBack }: SettingsPageProps) {
           <CardContent className="space-y-4">
             <div className="flex gap-4">
               <Button variant="outline" onClick={exportData}>
-                <span className="material-icons mr-2">download</span>
+                <span className="material-symbols-rounded mr-2">download</span>
                 Export Team Data
               </Button>
               <Button variant="destructive" onClick={handleLogout}>
-                <span className="material-icons mr-2">logout</span>
+                <span className="material-symbols-rounded mr-2">logout</span>
                 Logout
               </Button>
             </div>
